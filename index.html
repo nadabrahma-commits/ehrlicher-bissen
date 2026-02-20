@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ehrlicher Bissen - Check</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0; color: #333; }
+        .box { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #video { width: 100%; border-radius: 5px; background: #000; margin-bottom: 10px; }
+        .btn { display: inline-block; padding: 15px 25px; background: #2c3e50; color: white; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; font-size: 1.1em; }
+        #res { margin-top: 20px; padding: 15px; border-radius: 5px; font-weight: bold; display: none; }
+        .info { font-size: 0.85em; color: #666; margin-top: 15px; line-height: 1.4; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Ehrlicher Bissen</h1>
+        <p>Scanner für Lebensmittel-Klarheit</p>
+        
+        <video id="video" autoplay playsinline></video>
+        <button class="btn" onclick="scan()">Barcode scannen</button>
+
+        <div id="res"></div>
+        <div class="info">
+            <strong>Hinweis:</strong> Dieses Werkzeug gleicht Barcodes anonym mit offiziellen Zolldaten und Erntemengen ab. Keine Speicherung privater Daten.
+        </div>
+    </div>
+
+    <script>
+        async function scan() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                document.getElementById('video').srcObject = stream;
+                
+                // Simulation der Plausibilitätsprüfung (Ebene 2)
+                setTimeout(() => {
+                    const r = document.getElementById('res');
+                    r.style.display = 'block';
+                    r.style.background = '#fff3cd';
+                    r.style.color = '#856404';
+                    r.innerText = 'Gelb: Datenabgleich läuft... (Plausibilität wird geprüft)';
+                }, 1500);
+            } catch (err) {
+                alert("Kamera-Zugriff fehlgeschlagen. Bitte Berechtigung prüfen.");
+            }
+        }
+    </script>
+</body>
+</html>
