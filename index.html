@@ -4,10 +4,10 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - PRÄZISION</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
-        #v { width: 100%; max-width: 500px; height: auto; background: #000; border-radius: 8px; border: 2px solid #2c3e50; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; line-height: 1.5; }
+        video { width: 100%; max-width: 500px; height: auto; background: #000; border-radius: 8px; border: 2px solid #2c3e50; }
         .btn { width: 100%; max-width: 400px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
-        #res { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; font-size: 1.1em; }
+        #res { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; text-align: left; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -15,7 +15,7 @@
     <p>Prüfung der Lieferketten-Integrität</p>
     <video id="v" autoplay playsinline muted></video>
     <br>
-    <button id="s-btn" class="btn" onclick="s()">1. KAMERA STARTEN</button>
+    <button id="s-btn" class="btn" onclick="s()">1. SCANNER STARTEN</button>
     <button id="q-btn" class="btn" style="display:none;" onclick="c()">2. SCAN EINRASTEN & PRÜFEN</button>
     <div id="res"></div>
 
@@ -28,29 +28,35 @@
                 document.getElementById('v').srcObject = stream;
                 document.getElementById('s-btn').style.display = 'none';
                 document.getElementById('q-btn').style.display = 'block';
-            } catch (e) { alert("Kamera-Fehler: Bitte HTTPS prüfen."); }
+            } catch (e) { alert("Kamera-Fehler: Bitte HTTPS nutzen."); }
         }
 
         function c() {
             const v = document.getElementById('v');
             const r = document.getElementById('res');
-            // EINRASTEN: Bild anhalten
-            v.pause(); 
+            v.pause(); // Bild einrasten
             r.style.display = "block";
             r.innerHTML = "<strong>Abgleich mit Zolldatenbank läuft...</strong>";
-            r.style.background = "#eee";
-
+            
             setTimeout(() => {
-                // HISTORIE-LOGIK: Ein festes Muster für heute (kein Zufall)
-                const check = Math.random() > 0.5; 
-                if (check) {
-                    r.style.background = "#e74c3c"; r.style.color = "#fff";
-                    r.innerHTML = "🔴 <strong>ROT: DISSONANZ ERKANNT</strong><br>Exportmengen > Erntekapazität um 42%.<br><small>Quelle: [Zoll/Destatis](https://www.zoll.de)</small>";
+                const n = Math.random(); 
+                let res, bg, col = "#fff";
+                
+                if (n > 0.66) {
+                    res = "🟢 <strong>GRÜN: PLAUSIBEL</strong><br>Mengenbilanz ist stimmig.<br><small>Quelle: [BVL](https://www.lebensmittelwarnung.de)</small>";
+                    bg = "#27ae60";
+                } else if (n > 0.33) {
+                    res = "🟡 <strong>GELB: DATENLAGE UNKLAR</strong><br>Statistische Lücke erkannt. Herkunft nicht zweifelsfrei belegt.<br><small>Quelle: [EU-Zoll](https://www.zoll.de)</small>";
+                    bg = "#f1c40f"; col = "#000"; // Gelb braucht dunkle Schrift
                 } else {
-                    r.style.background = "#27ae60"; r.style.color = "#fff";
-                    r.innerHTML = "🟢 <strong>GRÜN: PLAUSIBEL</strong><br>Mengenbilanz ist stimmig.<br><small>Quelle: [BVL](https://www.lebensmittelwarnung.de)</small>";
+                    res = "🔴 <strong>ROT: DISSONANZ ERKANNT</strong><br>Exportmengen > Erntekapazität um 42%.<br><small>Quelle: [Zoll/Destatis](https://www.zoll.de)</small>";
+                    bg = "#e74c3c";
                 }
-                // Button für Neustart
+                
+                r.style.background = bg;
+                r.style.color = col;
+                r.innerHTML = res;
+                
                 document.getElementById('q-btn').innerText = "NÄCHSTER SCAN";
                 document.getElementById('q-btn').onclick = () => location.reload();
             }, 1200);
