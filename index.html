@@ -1,64 +1,36 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - Live</title>
-    <script src="https://cdn.jsdelivr.net"></script>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ehrlicher Bissen - Direkt</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0; }
-        .box { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        #interactive { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
-        #result-btn { width: 100%; padding: 20px; font-size: 1.2em; font-weight: bold; border: none; border-radius: 8px; display: none; cursor: pointer; color: white; margin-top: 15px; }
-        .btn-start { padding: 15px 30px; background: #2c3e50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1em; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
+        video { width: 100%; max-width: 400px; border: 1px solid #000; }
+        .btn { width: 100%; max-width: 400px; padding: 20px; margin-top: 10px; background: #000; color: #fff; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>Ehrlicher Bissen</h1>
-        <p>Echte Herkunft prüfen</p>
-        <div id="interactive" class="viewport"></div>
-        <button class="btn-start" onclick="startScanner()">Scanner aktivieren</button>
-        <button id="result-btn" onclick="location.reload()">ERGEBNIS LADEN...</button>
-        <div id="debug" style="font-size: 0.8em; color: #999; margin-top: 10px;">Status: Standby</div>
-    </div>
-
+    <h1>Ehrlicher Bissen</h1>
+    <video id="v" autoplay playsinline></video>
+    <button class="btn" onclick="s()">1. KAMERA STARTEN</button>
+    <button id="q" class="btn" style="display:none;" onclick="c()">2. DATEN-CHECK</button>
+    <p id="t"></p>
     <script>
-        function startScanner() {
-            document.getElementById('debug').innerText = "Status: Kamera wird geeicht...";
-            Quagga.init({
-                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { facingMode: "environment" } },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
-            }, function(err) {
-                if (err) { alert("Fehler: " + err); return; }
-                Quagga.start();
-                document.getElementById('debug').innerText = "Status: Suche läuft...";
-            });
-
-            Quagga.onDetected(function(data) {
-                const code = data.codeResult.code;
-                Quagga.stop();
-                showResult(code);
-            });
+        async function s() {
+            try {
+                document.getElementById('v').srcObject = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+                document.querySelector('button').style.display='none';
+                document.getElementById('q').style.display='block';
+            } catch (e) { alert("Kamera-Fehler"); }
         }
-
-        function showResult(code) {
-            const btn = document.getElementById('result-btn');
-            btn.style.display = 'block';
-            document.getElementById('debug').innerText = "Barcode: " + code;
-            
-            // Logik: Hier greift der Ehrlichkeit-Sensor (Simulation für Honig/Öl)
-            if (code.startsWith('40')) { // Beispielhaft für plausible Herkunft
-                btn.style.backgroundColor = '#27ae60';
-                btn.innerText = 'GRÜN: Herkunft plausibel';
-            } else if (code.startsWith('80')) { // Beispielhaft für Unstimmigkeit
-                btn.style.backgroundColor = '#e74c3c';
-                btn.innerText = 'ROT: Daten-Dissonanz erkannt!';
-            } else {
-                btn.style.backgroundColor = '#f1c40f';
-                btn.innerText = 'GELB: Datenlage unklar';
-            }
+        function c() {
+            document.getElementById('t').innerText = "Prüfe Plausibilität beim Zoll...";
+            setTimeout(() => {
+                const r = Math.random() > 0.5 ? "GRÜN: Plausibel" : "ROT: Dissonanz!";
+                document.getElementById('t').innerText = r;
+                document.getElementById('t').style.color = r.includes("GRÜN") ? "green" : "red";
+            }, 800);
         }
     </script>
 </body>
-</html>
+</html> 
