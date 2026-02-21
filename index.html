@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ehrlicher Bissen - Präzision</title>
     <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; color: #333; line-height: 1.5; }
+        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; line-height: 1.5; color: #333; }
         .box { max-width: 450px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #scanner { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; border: 2px solid #2c3e50; }
+        #scanner { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; }
         .btn { width: 100%; padding: 20px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
         #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ddd; }
         .source { font-size: 0.8em; color: #7f8c8d; margin-top: 10px; display: block; border-top: 1px solid #eee; padding-top: 5px; }
@@ -25,27 +27,29 @@
 
     <script>
         function startScanner() {
-            document.getElementById('scanner').style.display = 'block';
+            const scannerDiv = document.getElementById('scanner');
+            scannerDiv.style.display = 'block';
             document.getElementById('s-btn').style.display = 'none';
 
+            // Flexiblere Initialisierung für mobile Browser
             Quagga.init({
                 inputStream: {
                     name: "Live",
                     type: "LiveStream",
-                    target: document.querySelector('#scanner'),
+                    target: scannerDiv,
                     constraints: {
-                        // Flexiblere Kamera-Ansprache
-                        facingMode: "environment", 
+                        // Wir lassen dem Browser mehr Freiheit beim Finden der Kamera
+                        facingMode: "environment",
                         width: { min: 640 },
                         height: { min: 480 }
                     }
                 },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
+                decoder: { readers: ["ean_reader", "ean_8_reader"] },
+                locate: true
             }, function(err) {
                 if (err) {
-                    console.error(err);
-                    // Detaillierte Fehlermeldung für den User
-                    alert("Kamera-Fehler: Bitte stellen Sie sicher, dass Sie HTTPS nutzen und die Kamera-Berechtigung erteilt haben.");
+                    console.error("Quagga Init Error:", err);
+                    alert("Kamera-Zugriff fehlgeschlagen. Bitte stelle sicher, dass du die Seite in Chrome (Android) oder Safari (iOS) direkt öffnest und den Zugriff erlaubst.");
                     location.reload();
                     return;
                 }
@@ -78,4 +82,3 @@
         }
     </script>
 </body>
-</html>
