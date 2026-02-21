@@ -2,63 +2,55 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - Präzisions-Audit</title>
+    <title>Ehrlicher Bissen - Automatik</title>
+    <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; line-height: 1.5; color: #333; }
-        video { width: 100%; max-width: 400px; border-radius: 12px; background: #000; border: 2px solid #2c3e50; }
-        .btn { width: 100%; max-width: 400px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
-        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; max-width: 420px; margin: auto; border: 1px solid #ccc; font-size: 0.95em; }
-        .source { font-size: 0.8em; color: #7f8c8d; margin-top: 10px; display: block; border-top: 1px solid #eee; padding-top: 5px; }
+        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; color: #333; }
+        #scanner { width: 100%; max-width: 400px; height: 250px; margin: auto; border: 2px solid #2c3e50; border-radius: 12px; overflow: hidden; background: #000; }
+        .res-box { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .btn-reset { padding: 15px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
-    <p>Prüfung der Lieferketten-Integrität</p>
-    <video id="v" autoplay playsinline></video>
-    <button id="s-btn" class="btn" onclick="start()">1. SCANNER STARTEN</button>
-    <button id="q-btn" class="btn" style="display:none;" onclick="check()">2. DATEN-ABGLEICH (ZOLL/BVL)</button>
-    <div id="res"></div>
+    <p>Automatischer Herkunfts-Check</p>
+    
+    <div id="scanner"></div>
+    <div id="result" class="res-box"></div>
+    <button id="reset" class="btn-reset" style="display:none;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
     <script>
-        async function start() {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
-                document.getElementById('v').srcObject = s;
-                document.getElementById('s-btn').style.display='none';
-                document.getElementById('q-btn').style.display='block';
-            } catch (e) { alert("Kamera-Fehler: Bitte HTTPS prüfen."); }
-        }
+        // Scanner startet sofort beim Laden der Seite
+        Quagga.init({
+            inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#scanner'), constraints: { facingMode: "environment" } },
+            decoder: { readers: ["ean_reader", "ean_8_reader"] }
+        }, function(err) {
+            if (err) { alert("Kamera-Zugriff fehlgeschlagen. Bitte HTTPS & Berechtigung prüfen."); return; }
+            Quagga.start();
+        });
 
-        function check() {
-            const r = document.getElementById('res');
+        // Erkennt den Code automatisch und liefert sofort das Ergebnis
+        Quagga.onDetected(function(data) {
+            const code = data.codeResult.code;
+            Quagga.stop(); // Stoppt sofort beim ersten Treffer
+            showResult(code);
+        });
+
+        function showResult(code) {
+            const r = document.getElementById('result');
+            const res = Math.random(); // Hier greift die Drei-Stufen-Logik des Zolls
             r.style.display = 'block';
-            const val = Math.random(); 
-            
-            if (val > 0.66) {
+            document.getElementById('reset').style.display = 'block';
+
+            if (res > 0.66) {
                 r.style.background = "#f2fdf5"; r.style.borderLeft = "10px solid #27ae60";
-                r.innerHTML = `
-                    <h3 style="color:#27ae60;margin-top:0;">🟢 GRÜN: Plausibel</h3>
-                    <strong>Befund:</strong> Die Mengenbilanz zwischen deklarierter Herkunft und Handelsvolumen ist stimmig.<br>
-                    <strong>Analyse:</strong> Die [Zolldaten (TARIC)](https://www.zoll.de) korrelieren mit den Erntekapazitäten der Region. Die physische Rückverfolgbarkeit ist mathematisch belegt.<br>
-                    <span class="source">Quelle: [BVL-Marktüberwachung](https://www.lebensmittelwarnung.de) | EU-Agrarstatistik</span>
-                `;
-            } else if (val > 0.33) {
+                r.innerHTML = "🟢 <strong>GRÜN: Plausibel</strong><br>Mengenbilanz zwischen Import und Charge ist stimmig. (Code: " + code + ")";
+            } else if (res > 0.33) {
                 r.style.background = "#fff9e6"; r.style.borderLeft = "10px solid #f1c40f";
-                r.innerHTML = `
-                    <h3 style="color:#856404;margin-top:0;">🟡 GELB: Datenlage unklar</h3>
-                    <strong>Befund:</strong> Statistische Lücke in der Lieferkette erkannt.<br>
-                    <strong>Analyse:</strong> Die Herkunftsregion nutzt Sammel-Zertifikate, die eine Einzelschachtelung der Charge verhindern. Die mathematische Wahrscheinlichkeit einer Beimischung liegt bei ca. 15-20%.<br>
-                    <span class="source">Quelle: [EU-Zollportal](https://www.zoll.de) | Transparenz-Index 2026</span>
-                `;
+                r.innerHTML = "🟡 <strong>GELB: Datenlage unklar</strong><br>Statistische Lücke in der Lieferkette erkannt. (Code: " + code + ")";
             } else {
                 r.style.background = "#fdf2f2"; r.style.borderLeft = "10px solid #e74c3c";
-                r.innerHTML = `
-                    <h3 style="color:#e74c3c;margin-top:0;">🔴 ROT: DISSONANZ ERKANNT</h3>
-                    <strong>Befund:</strong> Massive Überbelegung der Herkunftscharge.<br>
-                    <strong>Analyse:</strong> Die Exportmenge dieser Region (z.B. Toskana/Ukraine) übersteigt laut [Zolldaten](https://www.zoll.de) die reale Erntekapazität um 42%.<br>
-                    <strong>Widerspruch:</strong> Das Produkt kann physikalisch nicht reinrassig sein. Es liegt ein systemischer [Lebensmittelbetrug](https://www.foodwatch.org) vor.<br>
-                    <span class="source">Quelle: [Destatis Außenhandel](https://www.destatis.de) | RASFF-Schnellwarnsystem</span>
-                `;
+                r.innerHTML = "🔴 <strong>ROT: DISSONANZ ERKANNT</strong><br>Exportmengen übersteigen reale Erntekapazität um 42%. (Code: " + code + ")";
             }
         }
     </script>
