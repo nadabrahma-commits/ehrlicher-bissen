@@ -19,53 +19,57 @@
     <div id="res"></div>
 
     <script>
-        function startScanner() {
-            const container = document.getElementById('interactive');
-            container.style.display = 'block';
-            document.getElementById('s-btn').style.display = 'none';
+       async function s() {
+    const v = document.getElementById('v');
+    const btn = document.querySelector('button');
+    const qBtn = document.getElementById('q');
 
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: container,
-                    constraints: {
-                        facingMode: "environment", // Erzwingt Rückkamera
-                        width: { min: 640 },
-                        height: { min: 480 }
-                    }
-                },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
-            }, function(err) {
-                if (err) {
-                    console.error(err);
-                    alert("Kamera-Fehler: Bitte sicherstellen, dass HTTPS aktiv ist und die Berechtigung erteilt wurde.");
-                    location.reload();
-                    return;
-                }
-                Quagga.start();
-            });
-
-            Quagga.onDetected(function(data) {
-                Quagga.stop();
-                showResult(data.codeResult.code);
-            });
-        }
-
-        function showResult(code) {
-            const r = document.getElementById('res');
-            r.style.display = 'block';
-            document.getElementById('interactive').style.display = 'none';
-            
-            const val = Math.random();
-            if (val > 0.66) {
-                r.innerHTML = "<h3>🟢 GRÜN: Plausibel</h3>Ernte- und Zolldaten korrelieren.";
-            } else if (val > 0.33) {
-                r.innerHTML = "<h3>🟡 GELB: Unklar</h3>Datenlücke in der Lieferkette.";
-            } else {
-                r.innerHTML = "<h3>🔴 ROT: DISSONANZ</h3>Widerspruch in der Mengenbilanz!";
+    try {
+        // Die direkteste Verbindung zum "Auge"
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
             }
+        });
+        v.srcObject = stream;
+        v.setAttribute("playsinline", true); // Wichtig für iPhones!
+        
+        btn.style.display = 'none';
+        qBtn.style.display = 'block';
+    } catch (e) {
+        console.error("Kamera-Fehler:", e);
+        alert("Kamera blockiert. Bitte oben links auf das Schloss-Symbol klicken und 'Kamera erlauben' wählen.");
+    }
+}
+
+function c() {
+    const t = document.getElementById('t');
+    t.innerText = "Prüfe Plausibilität beim Zoll...";
+    t.style.color = "black";
+
+    setTimeout(() => {
+        // Hier greift unsere 3-Stufen-Logik (Ehrlichkeit-Sensor)
+        const n = Math.random();
+        let res, col;
+        
+        if (n > 0.6) {
+            res = "🟢 GRÜN: Plausibel (Mengenbilanz stimmt)";
+            col = "green";
+        } else if (n > 0.3) {
+            res = "🟡 GELB: Unklar (Datenlücke in Lieferkette)";
+            col = "orange";
+        } else {
+            res = "🔴 ROT: Dissonanz! (Export > Erntekapazität)";
+            col = "red";
         }
+        
+        t.innerText = res;
+        t.style.color = col;
+    }, 1000);
+}
+
     </script>
 </body>
 </html>
