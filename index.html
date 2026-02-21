@@ -32,10 +32,13 @@
         }
 
         function c() {
-            const v = document.getElementById('v');
-            const r = document.getElementById('res');
-            v.pause(); // Bild einrasten
-            r.style.display = "block";
+    const v = document.getElementById('v');
+    v.pause(); 
+            
+    const r = document.getElementById('res');
+    r.style.display = "block";
+            v.pause(); 
+            
             r.innerHTML = "<strong>Abgleich mit Zolldatenbank läuft...</strong>";
             
             setTimeout(() => {
