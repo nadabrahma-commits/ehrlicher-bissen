@@ -1,81 +1,86 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - Live</title>
-    <script src="https://cdn.jsdelivr.net"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
-        #interactive { width: 100%; height: 300px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; display: none; }
-        <video id="v" autoplay playsinline> </video> { 
-    width: 100%; 
-    max-width: 500px; 
-    height: auto; /* Das ist der wichtigste Hebel! */
-    background: #000; 
-    border-radius: 8px; 
-}
-        .btn { width: 100%; max-width: 400px; padding: 20px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
-        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ccc; }
+        /* Das Video-Gehäuse: Flexibel für jedes Handy */
+        video { 
+            width: 100%; 
+            max-width: 500px; 
+            height: auto; 
+            background: #000; 
+            border-radius: 8px; 
+        }
+        .btn { 
+            width: 100%; 
+            max-width: 400px; 
+            padding: 20px; 
+            margin-top: 15px; 
+            background: #2c3e50; 
+            color: #fff; 
+            border: none; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            font-size: 1.1em; 
+        }
+        #t { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
     </style>
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
-    <div id="interactive"></div>
-    <button id="s-btn" class="btn" onclick="startScanner()">SCANNER STARTEN</button>
-    <div id="res"></div>
+    
+    <!-- Das Auge: Mit id="v" und playsinline für iPhones -->
+    <video id="v" autoplay playsinline muted></video>
+    
+    <br>
+    <button class="btn" onclick="s()">1. KAMERA STARTEN</button>
+    <button id="q" class="btn" style="display:none;" onclick="c()">2. DATEN-CHECK</button>
+    
+    <p id="t"></p>
 
     <script>
-       async function s() {
-    const v = document.getElementById('v');
-    const btn = document.querySelector('button');
-    const qBtn = document.getElementById('q');
+        async function s() {
+            const v = document.getElementById('v');
+            const qBtn = document.getElementById('q');
+            const sBtn = document.querySelector('button');
 
-    try {
-        // Die direkteste Verbindung zum "Auge"
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+            try {
+                // Die direkte Leitung zur Hardware
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                v.srcObject = stream;
+                
+                sBtn.style.display = 'none';
+                qBtn.style.display = 'block';
+            } catch (e) {
+                alert("Kamera blockiert. Bitte oben links auf das Schloss-Symbol klicken und 'Erlauben' wählen.");
             }
-        });
-        v.srcObject = stream;
-        v.setAttribute("playsinline", true); // Wichtig für iPhones!
-        
-        btn.style.display = 'none';
-        qBtn.style.display = 'block';
-    } catch (e) {
-        console.error("Kamera-Fehler:", e);
-        alert("Kamera blockiert. Bitte oben links auf das Schloss-Symbol klicken und 'Kamera erlauben' wählen.");
-    }
-}
-
-function c() {
-    const t = document.getElementById('t');
-    t.innerText = "Prüfe Plausibilität beim Zoll...";
-    t.style.color = "black";
-
-    setTimeout(() => {
-        // Hier greift unsere 3-Stufen-Logik (Ehrlichkeit-Sensor)
-        const n = Math.random();
-        let res, col;
-        
-        if (n > 0.6) {
-            res = "🟢 GRÜN: Plausibel (Mengenbilanz stimmt)";
-            col = "green";
-        } else if (n > 0.3) {
-            res = "🟡 GELB: Unklar (Datenlücke in Lieferkette)";
-            col = "orange";
-        } else {
-            res = "🔴 ROT: Dissonanz! (Export > Erntekapazität)";
-            col = "red";
         }
-        
-        t.innerText = res;
-        t.style.color = col;
-    }, 1000);
-}
 
+        function c() {
+            const t = document.getElementById('t');
+            t.innerText = "Prüfe Plausibilität beim Zoll...";
+            t.style.color = "black";
+
+            setTimeout(() => {
+                const n = Math.random();
+                if (n > 0.6) {
+                    t.innerText = "🟢 GRÜN: Plausibel";
+                    t.style.color = "green";
+                } else if (n > 0.3) {
+                    t.innerText = "🟡 GELB: Unklar";
+                    t.style.color = "orange";
+                } else {
+                    t.innerText = "🔴 ROT: Dissonanz!";
+                    t.style.color = "red";
+                }
+            }, 1000);
+        }
     </script>
 </body>
 </html>
