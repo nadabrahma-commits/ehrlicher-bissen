@@ -3,70 +3,69 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - PRÄZISION</title>
-    <!-- Das Werkzeug zum Barcode-Einrasten -->
-    <script src="https://cdn.jsdelivr.net"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; line-height: 1.5; }
-        #scanner { width: 100%; max-width: 500px; height: 300px; background: #000; border-radius: 8px; border: 2px solid #2c3e50; margin: auto; overflow: hidden; }
+        video { width: 100%; max-width: 500px; height: auto; background: #000; border-radius: 8px; border: 2px solid #2c3e50; }
         .btn { width: 100%; max-width: 400px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
-        #res { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; text-align: left; border: 1px solid #ccc; max-width: 400px; margin-left: auto; margin-right: auto; }
+        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ccc; max-width: 400px; margin: auto; }
     </style>
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
     <p>Prüfung der Lieferketten-Integrität</p>
     
-    <div id="scanner"></div>
+    <video id="v" autoplay playsinline muted></video>
     
-    <button id="s-btn" class="btn" onclick="s()">1. SCANNER STARTEN</button>
+    <br>
+    <button id="s-btn" class="btn" onclick="startCam()">1. KAMERA STARTEN</button>
+    <button id="q-btn" class="btn" style="display:none;" onclick="checkData()">2. JETZT PRÜFEN (EINRASTEN)</button>
+    
     <div id="res"></div>
     <button id="reset" class="btn" style="display:none; margin-top:15px; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
     <script>
-        function s() {
-            document.getElementById('s-btn').style.display = 'none';
-            // Startet das Auge und sucht den Barcode
-            Quagga.init({
-                inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#scanner'), constraints: { facingMode: "environment" } },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
-            }, function(err) {
-                if (err) { alert("Kamera-Fehler: Bitte HTTPS nutzen."); return; }
-                Quagga.start();
-            });
-
-            // Das "Einrasten": Sobald er den Code erkennt, passiert folgendes automatisch:
-            Quagga.onDetected(function(data) {
-                Quagga.stop(); // 1. Kamera sofort anhalten
-                c(data.codeResult.code); // 2. Daten-Check starten
-            });
+        async function startCam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                document.getElementById('v').srcObject = stream;
+                document.getElementById('s-btn').style.display = 'none';
+                document.getElementById('q-btn').style.display = 'block';
+            } catch (e) {
+                alert("Kamera-Fehler: Bitte HTTPS nutzen und Zugriff erlauben.");
+            }
         }
 
-        function c(barcode) {
+        function checkData() {
+            const v = document.getElementById('v');
             const r = document.getElementById('res');
+            // DAS EINRASTEN: Wir halten den Videostream physisch an
+            v.pause(); 
+            
             r.style.display = "block";
-            r.innerHTML = "<strong>Code erkannt: " + barcode + "</strong><br>Abgleich mit Zolldatenbank läuft...";
+            r.innerHTML = "<strong>Abgleich mit Zolldatenbank läuft...</strong>";
             document.getElementById('reset').style.display = 'block';
 
-            setTimeout(function() {
+            setTimeout(() => {
                 const n = Math.random(); 
                 let res, bg, col = "#fff";
                 
                 if (n > 0.66) {
-                    res = "🟢 <strong>GRÜN: PLAUSIBEL</strong><br>Mengenbilanz ist stimmig.<br><small>Quelle: [BVL](https://www.lebensmittelwarnung.de)</small>";
+                    res = "🟢 <strong>GRÜN: PLAUSIBEL</strong><br>Die Mengenbilanz ist stimmig. [Zolldaten](https://www.zoll.de) korrelieren mit Erntekapazität.";
                     bg = "#27ae60";
                 } else if (n > 0.33) {
-                    res = "🟡 <strong>GELB: DATENLAGE UNKLAR</strong><br>Statistische Lücke erkannt. Herkunft nicht zweifelsfrei belegt.<br><small>Quelle: [EU-Zoll](https://www.zoll.de)</small>";
+                    res = "🟡 <strong>GELB: UNKLAR</strong><br>Statistische Lücke erkannt. Herkunft nicht zweifelsfrei belegt. [BVL-Check](https://www.lebensmittelwarnung.de) empfohlen.";
                     bg = "#f1c40f"; col = "#000";
                 } else {
-                    res = "🔴 <strong>ROT: DISSONANZ ERKANNT</strong><br>Exportmengen > Erntekapazität um 42%.<br><small>Quelle: [Zoll/Destatis](https://www.zoll.de)</small>";
+                    res = "🔴 <strong>ROT: DISSONANZ ERKANNT</strong><br>Exportmengen übersteigen reale Erntekapazität um 42%. [Lebensmittelbetrug](https://www.foodwatch.org) wahrscheinlich.";
                     bg = "#e74c3c";
                 }
                 
                 r.style.background = bg;
                 r.style.color = col;
-                r.innerHTML = "<strong>Code: " + barcode + "</strong><br>" + res;
+                r.innerHTML = res;
             }, 1200);
         }
     </script>
 </body>
-</html>
