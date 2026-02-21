@@ -2,44 +2,46 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - Präzision</title>
+    <title>Ehrlicher Bissen - Live</title>
     <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; }
-        .box { max-width: 450px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 12px; }
-        #scanner { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; }
-        .btn { width: 100%; padding: 20px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
-        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ddd; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
+        #interactive { width: 100%; height: 300px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; display: none; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .btn { width: 100%; max-width: 400px; padding: 20px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
+        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>Ehrlicher Bissen</h1>
-        <div id="scanner"></div>
-        <button id="s-btn" class="btn" onclick="startScanner()">SCANNER STARTEN</button>
-        <div id="res"></div>
-        <button id="reset" class="btn" style="display:none; margin-top:15px; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
-    </div>
+    <h1>Ehrlicher Bissen</h1>
+    <div id="interactive"></div>
+    <button id="s-btn" class="btn" onclick="startScanner()">SCANNER STARTEN</button>
+    <div id="res"></div>
 
     <script>
         function startScanner() {
-            // Zeige das Scanner-Fenster erst beim Klick
-            document.getElementById('scanner').style.display = 'block';
+            const container = document.getElementById('interactive');
+            container.style.display = 'block';
             document.getElementById('s-btn').style.display = 'none';
 
             Quagga.init({
-                inputStream: { 
-                    name: "Live", 
-                    type: "LiveStream", 
-                    target: document.querySelector('#scanner'),
-                    constraints: { facingMode: "environment" } // Erzwingt Rückkamera
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: container,
+                    constraints: {
+                        facingMode: "environment", // Erzwingt Rückkamera
+                        width: { min: 640 },
+                        height: { min: 480 }
+                    }
                 },
                 decoder: { readers: ["ean_reader", "ean_8_reader"] }
             }, function(err) {
-                if (err) { 
+                if (err) {
                     console.error(err);
-                    alert("Kamera-Fehler: Bitte prüfe, ob du HTTPS nutzt und die Berechtigung erteilt hast."); 
-                    return; 
+                    alert("Kamera-Fehler: Bitte sicherstellen, dass HTTPS aktiv ist und die Berechtigung erteilt wurde.");
+                    location.reload();
+                    return;
                 }
                 Quagga.start();
             });
@@ -53,17 +55,15 @@
         function showResult(code) {
             const r = document.getElementById('res');
             r.style.display = 'block';
-            document.getElementById('scanner').style.display = 'none';
-            document.getElementById('reset').style.display = 'block';
+            document.getElementById('interactive').style.display = 'none';
             
-            // Zufällige Simulation für den Test
             const val = Math.random();
             if (val > 0.66) {
-                r.innerHTML = "<h3>🟢 GRÜN: Plausibel</h3>Erntemengen decken Verkaufszahlen.";
+                r.innerHTML = "<h3>🟢 GRÜN: Plausibel</h3>Ernte- und Zolldaten korrelieren.";
             } else if (val > 0.33) {
                 r.innerHTML = "<h3>🟡 GELB: Unklar</h3>Datenlücke in der Lieferkette.";
             } else {
-                r.innerHTML = "<h3>🔴 ROT: DISSONANZ</h3>Überbelegung der Herkunftscharge!";
+                r.innerHTML = "<h3>🔴 ROT: DISSONANZ</h3>Widerspruch in der Mengenbilanz!";
             }
         }
     </script>
