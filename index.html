@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - Präzision</title>
     <script src="https://cdn.jsdelivr.net"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; line-height: 1.5; color: #333; }
-        .box { max-width: 450px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #scanner { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        body { font-family: sans-serif; text-align: center; padding: 15px; background: #fff; }
+        .box { max-width: 450px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 12px; }
+        #scanner { width: 100%; height: 250px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; }
         .btn { width: 100%; padding: 20px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; }
         #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ddd; }
-        .source { font-size: 0.8em; color: #7f8c8d; margin-top: 10px; display: block; border-top: 1px solid #eee; padding-top: 5px; }
     </style>
 </head>
 <body>
     <div class="box">
         <h1>Ehrlicher Bissen</h1>
-        <p>Prüfung der Lieferketten-Integrität</p>
         <div id="scanner"></div>
         <button id="s-btn" class="btn" onclick="startScanner()">SCANNER STARTEN</button>
         <div id="res"></div>
@@ -27,31 +23,23 @@
 
     <script>
         function startScanner() {
-            const scannerDiv = document.getElementById('scanner');
-            scannerDiv.style.display = 'block';
+            // Zeige das Scanner-Fenster erst beim Klick
+            document.getElementById('scanner').style.display = 'block';
             document.getElementById('s-btn').style.display = 'none';
 
-            // Flexiblere Initialisierung für mobile Browser
             Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: scannerDiv,
-                    constraints: {
-                        // Wir lassen dem Browser mehr Freiheit beim Finden der Kamera
-                        facingMode: "environment",
-                        width: { min: 640 },
-                        height: { min: 480 }
-                    }
+                inputStream: { 
+                    name: "Live", 
+                    type: "LiveStream", 
+                    target: document.querySelector('#scanner'),
+                    constraints: { facingMode: "environment" } // Erzwingt Rückkamera
                 },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] },
-                locate: true
+                decoder: { readers: ["ean_reader", "ean_8_reader"] }
             }, function(err) {
-                if (err) {
-                    console.error("Quagga Init Error:", err);
-                    alert("Kamera-Zugriff fehlgeschlagen. Bitte stelle sicher, dass du die Seite in Chrome (Android) oder Safari (iOS) direkt öffnest und den Zugriff erlaubst.");
-                    location.reload();
-                    return;
+                if (err) { 
+                    console.error(err);
+                    alert("Kamera-Fehler: Bitte prüfe, ob du HTTPS nutzt und die Berechtigung erteilt hast."); 
+                    return; 
                 }
                 Quagga.start();
             });
@@ -64,21 +52,20 @@
 
         function showResult(code) {
             const r = document.getElementById('res');
-            const val = Math.random(); 
             r.style.display = 'block';
             document.getElementById('scanner').style.display = 'none';
             document.getElementById('reset').style.display = 'block';
-
+            
+            // Zufällige Simulation für den Test
+            const val = Math.random();
             if (val > 0.66) {
-                r.style.background = "#f2fdf5"; r.style.borderLeft = "10px solid #27ae60";
-                r.innerHTML = "<h3>🟢 GRÜN: Plausibel</h3><strong>Befund:</strong> Mengenbilanz stimmig.<br><strong>Analyse:</strong> Zolldaten korrelieren mit Erntekapazitäten.<br><span class='source'>Quelle: [BVL-Marktüberwachung](https://www.lebensmittelwarnung.de)</span>";
+                r.innerHTML = "<h3>🟢 GRÜN: Plausibel</h3>Erntemengen decken Verkaufszahlen.";
             } else if (val > 0.33) {
-                r.style.background = "#fff9e6"; r.style.borderLeft = "10px solid #f1c40f";
-                r.innerHTML = "<h3>🟡 GELB: Datenlage unklar</h3><strong>Befund:</strong> Statistische Lücke erkannt.<br><strong>Analyse:</strong> Sammel-Zertifikate verhindern Einzelschachtelung.<br><span class='source'>Quelle: [EU-Zollportal](https://www.zoll.de)</span>";
+                r.innerHTML = "<h3>🟡 GELB: Unklar</h3>Datenlücke in der Lieferkette.";
             } else {
-                r.style.background = "#fdf2f2"; r.style.borderLeft = "10px solid #e74c3c";
-                r.innerHTML = "<h3>🔴 ROT: DISSONANZ ERKANNT</h3><strong>Befund:</strong> Überbelegung der Charge.<br><strong>Analyse:</strong> Exportmengen > Erntekapazität um ca. 42%.<br><span class='source'>Quelle: [Destatis Außenhandel](https://www.destatis.de)</span>";
+                r.innerHTML = "<h3>🔴 ROT: DISSONANZ</h3>Überbelegung der Herkunftscharge!";
             }
         }
     </script>
 </body>
+</html>
