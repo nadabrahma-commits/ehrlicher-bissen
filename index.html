@@ -12,6 +12,27 @@
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
+   <!-- Steuerung direkt vor die Kamera legen -->
+<div id="ui-overlay" style="position: relative; z-index: 999; margin-top: 10px;">
+    <p style="color: white; font-family: sans-serif;">Wähle Kategorie & Status:</p>
+    
+    <!-- Beispiel für Säule 1: Honig -->
+    <div style="margin-bottom: 10px;">
+        <span style="color:white; width:100px; display:inline-block;">HONIG:</span>
+        <button onclick="check('grün', '0409')" style="background:#27ae60; color:white; border:none; padding:5px 10px; cursor:pointer;">Safe</button>
+        <button onclick="check('gelb', '0409')" style="background:#f1c40f; color:black; border:none; padding:5px 10px; cursor:pointer;">Unklar</button>
+        <button onclick="check('rot', '0409')" style="background:#e74c3c; color:white; border:none; padding:5px 10px; cursor:pointer;">Rot</button>
+    </div>
+
+    <!-- Beispiel für Säule 3: Öl -->
+    <div>
+        <span style="color:white; width:100px; display:inline-block;">ÖL:</span>
+        <button onclick="check('grün', '1509')" style="background:#27ae60; color:white; border:none; padding:5px 10px; cursor:pointer;">Safe</button>
+        <button onclick="check('gelb', '1509')" style="background:#f1c40f; color:black; border:none; padding:5px 10px; cursor:pointer;">Unklar</button>
+        <button onclick="check('rot', '1509')" style="background:#e74c3c; color:white; border:none; padding:5px 10px; cursor:pointer;">Rot</button>
+    </div>
+</div>
+   
     <video id="v" autoplay playsinline muted></video>
     <button id="s-btn" class="btn" onclick="start()">1. KAMERA STARTEN</button>
     <button id="q-btn" class="btn" style="display:none;" onclick="check()">2. JETZT PRÜFEN (EINRASTEN)</button>
