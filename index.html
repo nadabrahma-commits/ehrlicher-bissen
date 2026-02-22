@@ -2,71 +2,74 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - Ebene 1</title>
-    <script src="https://unpkg.com"></script>
+    <title>Ehrlicher Bissen - MASTER</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #000; color: #00ff00; text-align: center; padding: 10px; }
-        #reader { width: 100%; max-width: 500px; margin: auto; border: 2px solid #00ff00; border-radius: 8px; overflow: hidden; }
-        #res { margin: 20px auto; max-width: 500px; padding: 20px; border-radius: 8px; display: none; font-size: 1.1em; text-align: left; }
-        .status-header { font-weight: bold; font-size: 1.4em; margin-bottom: 10px; border-bottom: 1px dashed; }
-        button { background: #00ff00; color: #000; padding: 15px 30px; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; max-width: 500px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; }
+        video { width: 100%; max-width: 500px; background: #000; border-radius: 8px; border: 2px solid #2c3e50; }
+        .btn { width: 100%; max-width: 500px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        #res { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ddd; color: white; }
     </style>
 </head>
 <body>
+    <h1>Ehrlicher Bissen</h1>
+    <video id="v" autoplay playsinline muted></video>
+    
+    <button id="s-btn" class="btn" onclick="start()">1. KAMERA STARTEN</button>
+    
+    <!-- Die 5 Säulen als direkte Trigger nach dem Kamera-Start -->
+    <div id="saeulen" style="display:none; max-width:500px; margin:auto;">
+        <button class="btn" onclick="check('Honig')">HONIG PRÜFEN</button>
+        <button class="btn" onclick="check('Olivenöl')">ÖL PRÜFEN</button>
+        <button class="btn" onclick="check('Babybrei')">BABYBREI PRÜFEN</button>
+        <button class="btn" onclick="check('Brot')">BROT PRÜFEN</button>
+        <button class="btn" onclick="check('Kaffee')">KAFFEE PRÜFEN</button>
+    </div>
 
-    <h1>Ehrlicher Bissen [EBENE 1]</h1>
-    <div id="reader"></div>
     <div id="res"></div>
-    <button id="reset-btn" style="display:none;" onclick="location.reload()">NÄCHSTER SCAN</button>
+    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
     <script>
-        const scanner = new Html5Qrcode("reader");
+        const v = document.getElementById('v');
         const r = document.getElementById('res');
 
-        // Die 5 Säulen der Dissonanz (Statistik-Matrix)
-        const MATRIX = {
-            "409":  { cat: "HONIG (0409)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Exportmenge > Erntekapazität um 42%. [Zoll TARIC]" },
-            "1901": { cat: "BABYBREI (1901)", res: "🟡 GELB: UNKLAR", bg: "#f1c40f", txt: "Bio-Mengenbilanz Osteuropa lückenhaft. [Eurostat]" },
-            "1509": { cat: "OLIVENÖL (1509)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Herkunft 'Toskana' statistisch unplausibel. [BVL-Check]" },
-            "1905": { cat: "BACKWAREN (1905)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Lieferkette lückenlos nachvollziehbar. [Destatis]" },
-            "901":  { cat: "KAFFEE (0901)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Mengenbilanz stimmig. [Fairtrade-Audit]" }
-        };
+        async function start() {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+                v.srcObject = s;
+                document.getElementById('s-btn').style.display='none';
+                document.getElementById('saeulen').style.display='block';
+            } catch (e) { alert("Kamera-Fehler. HTTPS aktiv?"); }
+        }
 
-        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-
-        // Startvorgang: Sofortige Kamera-Anforderung beim Laden
-        scanner.start({ facingMode: "environment" }, config, (decodedText) => {
-            scanner.stop(); // Einrasten
-            processResult(decodedText);
-        }).catch(err => {
-            document.body.innerHTML += `<p style="color:red">Kamera-Fehler: Bitte HTTPS prüfen.</p>`;
-        });
-
-        function processResult(code) {
+        async function check(kategorie) {
+            v.pause(); // Bild einrasten (Beweissicherung)
+            document.getElementById('saeulen').style.display='none';
             r.style.display = 'block';
-            r.style.background = "#333";
-            r.innerHTML = `<strong>SCAN ERFOLGREICH: ${code}</strong><br>Abgleich mit TARIC/TRACES...`;
+            r.style.background = "#34495e";
+            r.innerHTML = `<strong>Abgleich für ${kategorie} mit BVL/TARIC läuft...</strong>`;
 
-            setTimeout(() => {
-                // Logik: Wir extrahieren die ersten Ziffern des Barcodes für den TARIC-Abgleich
-                const prefix = Object.keys(MATRIX).find(p => code.includes(p)) || "unklar";
-                const db = MATRIX[prefix] || { 
-                    cat: "UNBEKANNT", 
-                    res: "🟡 GELB: UNKLAR", 
-                    bg: "#f1c40f", 
-                    txt: "Kein Datensatz in den 5 Säulen gefunden. Manuelle Prüfung einleiten." 
-                };
+            try {
+                // ECHTE ABFRAGE: Wir prüfen die amtliche Datenbank für Lebensmittelwarnungen
+                const response = await fetch(`https://api.lebensmittelwarnung.de{kategorie}`);
+                const data = await response.json();
 
-                r.style.background = db.bg;
-                r.style.color = (db.bg === "#f1c40f") ? "black" : "white";
-                r.innerHTML = `
-                    <div class="status-header">${db.cat}</div>
-                    <strong>Status: ${db.res}</strong><br><br>
-                    ${db.txt}<br><br>
-                    <small>Abgeglichen am: ${new Date().toLocaleString()}</small>
-                `;
-                document.getElementById('reset-btn').style.display = 'block';
-            }, 1200);
+                // DIE 3 ZUSTÄNDE LAUT DATENBANK
+                if (data.totalElements > 0) {
+                    // 1. ROT: Treffer gefunden = Warnung/Lüge
+                    r.style.background = "#e74c3c";
+                    r.innerHTML = `<strong>Status: 🔴 ROT (GLATT GELOGEN)</strong><br><br>Amtliche Warnung für ${kategorie} gefunden: ${data.content[0].titel}. [BVL/Zoll]`;
+                } else {
+                    // 2. GRÜN: Kein Treffer = Unbedenklich
+                    r.style.background = "#27ae60";
+                    r.innerHTML = `<strong>Status: 🟢 GRÜN (UNBEDENKLICH)</strong><br><br>Keine negativen Einträge für ${kategorie} in der Zentraldatenbank gefunden.`;
+                }
+            } catch (e) {
+                // 3. GELB: Verbindungsproblem oder lückenhafte Daten = Unklar
+                r.style.background = "#f1c40f";
+                r.style.color = "black";
+                r.innerHTML = `<strong>Status: 🟡 GELB (UNKLAR)</strong><br><br>Datenbank-Dissonanz: Abfrage konnte nicht final validiert werden. Manuelle Prüfung nötig.`;
+            }
+            document.getElementById('r-btn').style.display = 'block';
         }
     </script>
 </body>
