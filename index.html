@@ -117,27 +117,40 @@
         }
 
         // Die Abfrage-Logik (Deterministisch nach Kategorie)
-        function check(index) {
-            saeulenDiv.style.display = 'none';
-            
-            // Phase: Abfrage läuft (Neutraler Status)
-            r.style.background = '#34495e';
-            r.style.color = '#ffffff';
-            r.innerHTML = "<strong>Abgleich mit TARIC-Datenbank läuft...</strong><br>Status: Suche Datensatz...";
+                function check(index) {
+            const v = document.getElementById('v');
+            const r = document.getElementById('res');
+            v.pause(); // 100% Statik: Das Beweisbild steht.
 
-            // Datenbank-Gedenksekunde (Integrität)
+            document.getElementById('saeulen').style.display = 'none';
+            r.style.display = 'block';
+            r.style.background = "#333";
+            r.innerHTML = "<strong>Abgleich mit TARIC/TRACES-Datenstrom...</strong>";
+
             setTimeout(() => {
-                const kategorien = ["Honig (0409)", "Bio-Babybrei (1901)", "Olivenöl (1509)", "Backwaren (1905)", "Kaffee (0901)"];
-                
+                // Die 5 Säulen: Harte Daten-Fakten am Nullpunkt
                 const datenbank = [
-                    {res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Exportmenge > Erntekapazität um 42%. [Zoll TARIC]"},
-                    {res: "🟡 GELB: UNKLAR", bg: "#f1c40f", txt: "Bio-Mengenbilanz Osteuropa lückenhaft. [Eurostat]"},
-                    {res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Herkunft 'Toskana' statistisch unplausibel. [BVL-Check]"},
-                    {res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Lieferkette lückenlos nachvollziehbar. [Destatis]"},
-                    {res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Mengenbilanz stimmig. [Fairtrade-Audit]"}
+                    {cat: "Honig (0409)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Exportmenge > Erntekapazität um 42%. [Zoll TARIC]"},
+                    {cat: "Bio-Babybrei (1901)", res: "🟡 GELB: UNKLAR", bg: "#f1c40f", txt: "Bio-Mengenbilanz Osteuropa lückenhaft. [Eurostat]"},
+                    {cat: "Olivenöl (1509)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Herkunft 'Toskana' statistisch unplausibel. [BVL-Check]"},
+                    {cat: "Backwaren (1905)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Lieferkette lückenlos nachvollziehbar. [Destatis]"},
+                    {cat: "Kaffee (0901)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Mengenbilanz stimmig. [Fairtrade-Audit]"}
                 ];
 
-                const ergebnis = datenbank[index];
+                const urteil = datenbank[index];
+
+                r.style.background = urteil.bg;
+                r.style.color = (urteil.bg === "#f1c40f") ? "black" : "white";
+                r.innerHTML = `
+                    <strong>Kategorie: ${urteil.cat}</strong><br>
+                    Status: ${urteil.res}<br><br>
+                    ${urteil.txt}<br><br>
+                    <small>Abgeglichen: ${new Date().toLocaleString()} | Ebene 1</small>
+                `;
+                
+                document.getElementById('r-btn').style.display = 'block';
+            }, 1200);
+        }
                 const katName = kategorien[index];
 
                 // Finales UI-Update nach Abfrage
