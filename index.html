@@ -49,21 +49,30 @@
         const qBtn = document.getElementById('q-btn');
         const sBtn = document.getElementById('s-btn');
         const saeulenDiv = document.getElementById('saeulen');
-
-        // Kamera initialisieren
+        // Kamera initialisieren (Abfrage erst beim Klick)
         async function start() {
-    try {
-        // Universelle Constraints: Versuche Rückkamera, nimm sonst was da ist
-        const constraints = { 
-            video: { 
-                facingMode: "environment" 
-            } 
-        };
-                v.srcObject = s;
-                sBtn.style.display = 'none';
-                qBtn.style.display = 'block';
+            try {
+                // Browser fragt JETZT nach der Erlaubnis
+                const constraints = { 
+                    video: { facingMode: "environment" } 
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                // Zuweisung an das Video-Element
+                const video = document.getElementById('v');
+                video.srcObject = stream;
+                video.setAttribute("playsinline", true); // Wichtig für Handys
+                
+                // Startet den Stream und wechselt das Interface
+                await video.play();
+                
+                document.getElementById('s-btn').style.display = 'none';
+                document.getElementById('q-btn').style.display = 'block';
+                
             } catch (e) {
-                alert("Kamera-Fehler. Bitte HTTPS oder Berechtigungen prüfen.");
+                console.error("Kamera-Fehler:", e);
+                alert("Scan nicht möglich: Bitte Kamera-Zugriff erlauben und sicherstellen, dass die Seite über HTTPS läuft.");
             }
         }
 
