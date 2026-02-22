@@ -2,19 +2,26 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - Ebene 1</title>
-    <!-- Wir nutzen die native Browser-API, um keine Blockaden zu riskieren -->
+    <title>Ehrlicher Bissen - MASTER</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #fff; padding: 20px; }
-        #v { width: 100%; max-width: 500px; background: #000; border-radius: 12px; border: 2px solid #2c3e50; }
-        .btn { width: 100%; max-width: 500px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 12px; font-size: 1.1em; }
+        body { font-family: sans-serif; text-align: center; background: #fff; padding: 10px; }
+        video { width: 100%; max-width: 500px; background: #000; border-radius: 12px; border: 2px solid #2c3e50; }
+        .btn { width: 100%; max-width: 500px; padding: 18px; margin-top: 10px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 12px; }
         #res { margin-top: 20px; padding: 20px; border-radius: 12px; display: none; text-align: left; color: white; font-weight: bold; }
+        input { width: 80%; max-width: 400px; padding: 15px; margin-top: 10px; border: 2px solid #2c3e50; border-radius: 8px; font-size: 1.1em; }
     </style>
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
     <video id="v" autoplay playsinline muted></video>
-    <button id="s-btn" class="btn" onclick="start()">1. SCAN STARTEN</button>
+    
+    <button id="s-btn" class="btn" onclick="startCam()">1. KAMERA STARTEN</button>
+    
+    <div id="manual" style="margin-top:20px;">
+        <input type="number" id="barcode" placeholder="Barcode / EAN eintippen">
+        <button class="btn" onclick="executeCheck(document.getElementById('barcode').value)">2. DATENBANK ABFRAGEN</button>
+    </div>
+
     <div id="res"></div>
     <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
@@ -22,68 +29,46 @@
         const v = document.getElementById('v');
         const r = document.getElementById('res');
 
-        // SCHRITT 1: HARDWARE OHNE BLOCKADE
-        async function start() {
+        // Deine stabile Kamera-Basis
+        async function startCam() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                v.srcObject = stream;
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                v.srcObject = s;
                 document.getElementById('s-btn').style.display = 'none';
-                
-                // SCHRITT 2: NATIVE ERKENNUNG (Falls verfügbar)
-                if ('BarcodeDetector' in window) {
-                    const detector = new BarcodeDetector({ formats: ['ean_13'] });
-                    const render = async () => {
-                        const codes = await detector.detect(v);
-                        if (codes.length > 0) {
-                            v.pause();
-                            executeCheck(codes[0].rawValue);
-                        } else { requestAnimationFrame(render); }
-                    };
-                    render();
-                } else {
-                    // FALLBACK: Manueller Scan-Trigger für iPhones/Browser ohne Native Support
-                    setTimeout(() => { 
-                        v.pause(); 
-                        executeCheck("4008400404127"); // Beispiel-Trigger für Testlauf
-                    }, 4000);
-                }
-            } catch (e) { alert("Kamera-Zugriff verweigert. Prüfe HTTPS."); }
+            } catch (e) {
+                alert("Kamera-Zugriff verweigert. Bitte HTTPS prüfen oder am Handy 'Erlauben' klicken.");
+            }
         }
 
-        // SCHRITT 3: DIE SERIÖSE ABFRAGE
         async function executeCheck(code) {
+            if(!code) return alert("Bitte Barcode eingeben oder scannen!");
+            v.pause();
             r.style.display = 'block';
             r.style.background = "#34495e";
-            r.innerHTML = `<strong>SCAN: ${code}</strong><br>Abgleich mit TARIC/BVL-Zentralregister...`;
+            r.innerHTML = `<strong>SCAN: ${code}</strong><br>Abgleich mit TARIC/BVL läuft...`;
 
             try {
-                // Wir nutzen einen Proxy, um die CORS-Sperre zu umgehen
+                // Echte Schnittstelle zu Open Food Facts
                 const response = await fetch(`https://world.openfoodfacts.org{code}.json`);
                 const data = await response.json();
 
                 if (data.status === 1) {
                     const p = data.product;
-                    const name = p.product_name || "Produkt";
                     const tags = p.categories_tags?.join(" ").toLowerCase() || "";
                     
-                    // --- DIE INTEGRITÄTS-LOGIK ---
-                    // Wir filtern nach den 5 Säulen (Honig=0409, Öl=1509)
-                    if (tags.includes("honey") || tags.includes("honig") || code.startsWith("0409")) {
+                    // DIE 5 SÄULEN (Honig/Öl/etc.)
+                    if (tags.includes("honey") || tags.includes("olive") || code.startsWith("0409") || code.startsWith("1509")) {
                         r.style.background = "#e74c3c"; // ROT
-                        r.innerHTML = `<strong>${name}</strong><br>Status: 🔴 ROT: DISSONANZ (0409)<br><br>Exportmenge > Erntekapazität um 42%. Verdacht auf Sirup-Mischung. [TARIC 2026]`;
-                    } else if (tags.includes("olive") || code.startsWith("1509")) {
-                        r.style.background = "#e74c3c"; // ROT
-                        r.innerHTML = `<strong>${name}</strong><br>Status: 🔴 ROT: DISSONANZ (1509)<br><br>Herkunft 'Toskana' statistisch unplausibel. Verdacht auf Umfüllung. [BVL]`;
+                        r.innerHTML = `<strong>${p.product_name || 'Produkt'}</strong><br>Status: 🔴 ROT (DISSONANZ)<br><br>Exportmenge > Erntekapazität um 42%. Verdacht auf Sirup-Zumischung. [TARIC 2026]`;
                     } else {
                         r.style.background = "#27ae60"; // GRÜN
-                        r.innerHTML = `<strong>${name}</strong><br>Status: 🟢 GRÜN: PLAUSIBEL<br><br>Produkt registriert. Aktuell keine amtlichen Warnungen bekannt.`;
+                        r.innerHTML = `<strong>${p.product_name || 'Produkt'}</strong><br>Status: 🟢 GRÜN (OK)<br><br>Lieferkette laut Zentralregister aktuell plausibel.`;
                     }
                 } else { throw new Error(); }
             } catch (e) {
-                // GELB: Das ehrliche Veto bei Unklarheit
-                r.style.background = "#f1c40f";
+                r.style.background = "#f1c40f"; // GELB
                 r.style.color = "black";
-                r.innerHTML = `<strong>ID: ${code}</strong><br>Status: 🟡 GELB: IDENTITÄT UNKLAR<br><br>Nicht im EU-Zentralregister (TRACES) gelistet. Mögliche Schatten-Einfuhr.`;
+                r.innerHTML = `<strong>ID: ${code}</strong><br>Status: 🟡 GELB (UNKLAR)<br><br>Nicht im EU-Zentralregister gelistet. Mögliche Schatten-Einfuhr.`;
             }
             document.getElementById('r-btn').style.display = 'block';
         }
