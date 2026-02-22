@@ -52,8 +52,13 @@
 
         // Kamera initialisieren
         async function start() {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+    try {
+        // Universelle Constraints: Versuche Rückkamera, nimm sonst was da ist
+        const constraints = { 
+            video: { 
+                facingMode: "environment" 
+            } 
+        };
                 v.srcObject = s;
                 sBtn.style.display = 'none';
                 qBtn.style.display = 'block';
