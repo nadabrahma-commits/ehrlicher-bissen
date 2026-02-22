@@ -52,43 +52,34 @@
             try {
                 // 1. SCHNITTSTELLE: OpenFoodFacts (Produkt-Identität)
                 const apiURL = `https://world.openfoodfacts.org{code}.json?fields=product_name,labels_tags,categories`;
-                const response = await fetch(apiURL);
-                
-                if (!response.ok) throw new Error("Schnittstellen-Dissonanz");
                 const data = await response.json();
-                                
+
                 if (data.status === 1) {
                     const p = data.product;
                     const name = p.product_name || "Unbekanntes Produkt";
-                    const tags = p.labels_tags || [];
                     
-                    // KRITERIUM FÜR ROT: Offizielle Warnungen oder Inhaltsstoff-Betrug
-                    const istWarnung = tags.some(t => t.includes("warning") || t.includes("recall") || t.includes("danger"));
-                    
-                    if (istWarnung) {
-                        r.style.background = "#e74c3c"; // ROT
-                        r.innerHTML = `<strong>Kategorie: ${name}</strong><br>Status: 🔴 ROT (GLATT GELOGEN)<br><br>Amtlicher Rückruf oder Sicherheitswarnung in der Zentraldatenbank gefunden. [BVL-Check]`;
+                    // Seriöse Prüfung: Gibt es Warnungen (Recall/Warning) in den Datenbank-Tags?
+                    const hatWarnung = p.labels_tags?.some(tag => 
+                        tag.toLowerCase().includes("warning") || 
+                        tag.toLowerCase().includes("recall")
+                    );
+
+                    if (hatWarnung) {
+                        r.style.background = "#e74c3c"; // ROT: BETRUG/WARNUNG
+                        r.innerHTML = `<strong>${name}</strong><br>Status: 🔴 ROT (DISSONANZ)<br><br>Amtlicher Rückruf oder Sicherheitswarnung im System gefunden!`;
                     } else {
-                        r.style.background = "#27ae60"; // GRÜN
-                        r.innerHTML = `<strong>Kategorie: ${name}</strong><br>Status: 🟢 GRÜN (UNBEDENKLICH)<br><br>Produkt im Register geführt. Keine aktuellen Dissonanzen in der Lieferkette bekannt.`;
+                        r.style.background = "#27ae60"; // GRÜN: OK
+                        r.innerHTML = `<strong>${name}</strong><br>Status: 🟢 GRÜN (PLAUSIBEL)<br><br>Produkt im Register geführt. Keine aktuellen Dissonanzen bekannt.`;
                     }
                 } else {
-                    // WEICHE: Produkt-ID unbekannt
-                    throw new Error("Nicht gelistet");
+                    // Wenn der Status nicht 1 ist, kennt die DB den Code nicht
+                    throw new Error("NOT_FOUND");
                 }
-
             } catch (e) {
-                // 3. SCHNITTSTELLE: DER "GELB"-STATUS (UNKLAR)
-                // Greift bei Netzwerkfehlern, CORS-Blockaden oder fehlenden Einträgen
+                // GELB: Wenn das Produkt nicht gelistet ist (Schatten-Lieferkette)
                 r.style.background = "#f1c40f";
                 r.style.color = "black";
-                r.innerHTML = `
-                    <strong>SCAN: ${code}</strong><br>
-                    Status: 🟡 GELB (UNKLAR / DISSONANZ)<br><br>
-                    <strong>Analyse:</strong> Die Schnittstelle konnte keine eindeutigen Validierungsdaten liefern. 
-                    Mögliche Ursache: Schattenimport oder fehlende TRACES-Anmeldung. 
-                    Manuelle Prüfung der Mengenbilanz am Nullpunkt erforderlich.
-                `;
+                r.innerHTML = `<strong>SCAN: ${code}</strong><br>Status: 🟡 GELB (UNKLAR)<br><br>Produkt nicht im Zentralregister (BVL/TARIC) gefunden. Mögliche Mengen-Dissonanz. Manuelle Prüfung nötig.`;
             }
             document.getElementById('r-btn').style.display = 'block';
         }
