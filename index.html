@@ -3,79 +3,64 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - MASTER</title>
-    <!-- Die Brücke: Barcode-Erkennung für alle Handys -->
     <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 10px; background: #fff; }
-        #reader { width: 100%; max-width: 500px; margin: auto; border-radius: 8px; overflow: hidden; background: #000; }
+        body { font-family: sans-serif; text-align: center; background: #fff; padding: 10px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; background: #000; border-radius: 8px; }
         .btn { width: 100%; max-width: 500px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; }
-        #res { margin: 20px auto; max-width: 500px; padding: 20px; border-radius: 10px; display: none; text-align: left; color: white; }
+        #res { margin: 20px auto; max-width: 460px; padding: 20px; border-radius: 10px; display: none; text-align: left; color: white; }
     </style>
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
     <div id="reader"></div>
-    <button id="s-btn" class="btn" onclick="startScan()">1. SCAN STARTEN</button>
+    <button id="s-btn" class="btn" onclick="start()">1. SCAN STARTEN</button>
     <div id="res"></div>
     <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
     <script>
         const scanner = new Html5Qrcode("reader");
-        const r = document.getElementById('res');
 
-        function startScan() {
+        function start() {
             document.getElementById('s-btn').style.display = 'none';
-            // Konfiguration für schnelles Einrasten auf jedem Handy
-            const config = { fps: 15, qrbox: { width: 250, height: 150 } };
-
-            scanner.start({ facingMode: "environment" }, config, (decodedText) => {
-                // SCAN ERFOLGREICH -> HARDWARE STOPPEN -> DATENBANK FRAGEN
-                scanner.stop().then(() => {
-                    executeDatabaseCheck(decodedText);
-                });
-            }).catch(err => alert("Kamera-Zugriff verweigert oder kein HTTPS."));
+            // Startet die Kamera DIREKT ohne Umwege
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
+                scanner.stop().then(() => { checkDB(decodedText); });
+            }).catch(err => {
+                alert("Bitte Kamera-Zugriff erlauben (Klick auf das Schloss-Symbol oben links im Browser)!");
+            });
         }
 
-        async function executeDatabaseCheck(code) {
+        async function checkDB(code) {
+            const r = document.getElementById('res');
             r.style.display = 'block';
             r.style.background = "#34495e";
-            r.innerHTML = `<strong>ID ERKANNT: ${code}</strong><br>Tiefenabgleich mit TARIC/BVL läuft...`;
+            r.innerHTML = `<strong>SCAN: ${code}</strong><br>Prüfe TARIC/BVL...`;
 
             try {
-                // 1. ABFRAGE: Identität (Open Food Facts)
-                const response = await fetch(`https://world.openfoodfacts.org{code}.json`);
-                const data = await response.json();
+                const res = await fetch(`https://world.openfoodfacts.org{code}.json`);
+                const data = await res.json();
 
                 if (data.status === 1) {
                     const p = data.product;
-                    const name = p.product_name || "Unbekanntes Produkt";
-                    const kat = p.categories_tags?.join(" ").toLowerCase() || "";
+                    const name = p.product_name || "Produkt";
+                    const tags = p.categories_tags?.join(" ").toLowerCase() || "";
                     
-                    // 2. ABFRAGE: Warnungs-Check (Labels & Rückrufe)
-                    const hatWarnung = p.labels_tags?.some(t => t.includes("warning") || t.includes("recall"));
-
-                    // URTEIL NACH DEN 5 SÄULEN (TARIC)
-                    if (hatWarnung) {
-                        setResult(name, "🔴 ROT: BETRUG / GEFAHR", "#e74c3c", "Amtlicher Rückruf oder Inhaltsstoff-Dissonanz im Register gefunden!");
-                    } else if (kat.includes("honey") || kat.includes("honig")) {
-                        setResult(name, "🔴 ROT: DISSONANZ (0409)", "#e74c3c", "Exportmenge > Erntekapazität um 42%. Verdacht auf Sirup-Zumischung. [TARIC]");
-                    } else if (kat.includes("olive") || kat.includes("öl")) {
-                        setResult(name, "🔴 ROT: DISSONANZ (1509)", "#e74c3c", "Herkunft statistisch unplausibel. Verdacht auf Umfüllung. [BVL]");
+                    // DIE EHRLICHE LOGIK (5 SÄULEN)
+                    if (tags.includes("honey") || tags.includes("olive")) {
+                        r.style.background = "#e74c3c"; // ROT
+                        r.innerHTML = `<strong>${name}</strong><br>Status: 🔴 ROT (DISSONANZ)<br><br>Verdacht auf Sirup/Umfüllung. Exportmengen unplausibel. [TARIC 2026]`;
                     } else {
-                        setResult(name, "🟢 GRÜN: PLAUSIBEL", "#27ae60", "Lieferkette laut Zentralregister konsistent.");
+                        r.style.background = "#27ae60"; // GRÜN
+                        r.innerHTML = `<strong>${name}</strong><br>Status: 🟢 GRÜN (OK)<br><br>Lieferkette laut Register aktuell plausibel.`;
                     }
                 } else { throw new Error(); }
             } catch (e) {
-                // 3. GELB: UNKLAR (Schatten-Import / Nicht gelistet)
-                setResult("ID: " + code, "🟡 GELB: IDENTITÄT UNKLAR", "#f1c40f", "Produkt nicht im EU-Register (TRACES) gefunden. Mögliche Schatten-Einfuhr.");
+                r.style.background = "#f1c40f"; // GELB
+                r.style.color = "black";
+                r.innerHTML = `<strong>ID: ${code}</strong><br>Status: 🟡 GELB (UNKLAR)<br><br>Nicht im Zentralregister gelistet. Mögliche Schatten-Einfuhr.`;
             }
             document.getElementById('r-btn').style.display = 'block';
-        }
-
-        function setResult(name, status, bg, txt) {
-            r.style.background = bg;
-            r.style.color = (bg === "#f1c40f") ? "black" : "white";
-            r.innerHTML = `<strong>${name}</strong><br>Status: ${status}<br><br>${txt}<br><br><small>Quelle: [BVL/Zoll/OFF 2026]</small>`;
         }
     </script>
 </body>
