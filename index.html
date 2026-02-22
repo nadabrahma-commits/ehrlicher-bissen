@@ -1,170 +1,72 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ehrlicher Bissen - Ebene 1</title>
+    <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #fff; color: #2c3e50; }
-        video { width: 100%; max-width: 500px; height: auto; background: #000; border-radius: 8px; border: 2px solid #2c3e50; }
-        .btn { width: 100%; max-width: 500px; padding: 18px; margin: 10px auto; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 1.1em; display: block; }
-        .grid { display: none; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 15px auto; }
-        .saeule-btn { padding: 15px; background: #f8f9fa; border: 2px solid #2c3e50; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #res { margin: 20px auto; max-width: 460px; padding: 20px; border-radius: 10px; display: none; text-align: left; border: 1px solid #ddd; min-height: 120px; }
-        small { font-size: 0.8em; opacity: 0.8; display: block; margin-top: 10px; }
+        body { font-family: 'Courier New', monospace; background: #000; color: #00ff00; text-align: center; padding: 10px; }
+        #reader { width: 100%; max-width: 500px; margin: auto; border: 2px solid #00ff00; border-radius: 8px; overflow: hidden; }
+        #res { margin: 20px auto; max-width: 500px; padding: 20px; border-radius: 8px; display: none; font-size: 1.1em; text-align: left; }
+        .status-header { font-weight: bold; font-size: 1.4em; margin-bottom: 10px; border-bottom: 1px dashed; }
+        button { background: #00ff00; color: #000; padding: 15px 30px; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; max-width: 500px; }
     </style>
 </head>
 <body>
 
-    <h1>Ehrlicher Bissen</h1>
-    
-    <!-- HARDWARE: Kamera-Statik -->
-    <video id="v" autoplay playsinline muted></video>
-
-    <!-- STEP 1: Kamera aktivieren -->
-    <button id="s-btn" class="btn" onclick="start()">1. KAMERA STARTEN</button>
-
-    <!-- STEP 2: Bild fixieren -->
-    <button id="q-btn" class="btn" style="display:none;" onclick="freeze()">2. PRODUKT FIXIEREN (EINRASTEN)</button>
-
-    <!-- STEP 3: Kategorie-Auswahl (Die 5 Säulen) -->
-    <div id="saeulen" class="grid">
-        <div style="grid-column: span 2; font-size: 0.9em; margin-bottom: 5px;">Kategorie für TARIC-Abgleich wählen:</div>
-        <button class="saeule-btn" onclick="check(0)">HONIG</button>
-        <button class="saeule-btn" onclick="check(1)">BABYBREI</button>
-        <button class="saeule-btn" onclick="check(2)">OLIVENÖL</button>
-        <button class="saeule-btn" onclick="check(3)">BROT</button>
-        <button class="saeule-btn" onclick="check(4)" style="grid-column: span 2;">KAFFEE</button>
-    </div>
-
-    <!-- OUTPUT: Resultat nach Abfrage -->
+    <h1>Ehrlicher Bissen [EBENE 1]</h1>
+    <div id="reader"></div>
     <div id="res"></div>
-
-    <!-- RESET -->
-    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
+    <button id="reset-btn" style="display:none;" onclick="location.reload()">NÄCHSTER SCAN</button>
 
     <script>
-        const v = document.getElementById('v');
+        const scanner = new Html5Qrcode("reader");
         const r = document.getElementById('res');
-        const qBtn = document.getElementById('q-btn');
-        const sBtn = document.getElementById('s-btn');
-        const saeulenDiv = document.getElementById('saeulen');
-        /async function check(index) {
-    const r = document.getElementById('res');
-    const kategorien = ["Honig", "Babybrei", "Olivenöl", "Brot", "Kaffee"];
-    const gewaehlt = kategorien[index];
 
-    // INITIALISIERUNG
-    document.getElementById('saeulen').style.display = 'none';
-    r.style.display = 'block';
-    r.style.background = "#34495e"; 
-    r.style.color = "white";
-    r.innerHTML = `<strong>Abgleich für ${gewaehlt} läuft...</strong>`;
+        // Die 5 Säulen der Dissonanz (Statistik-Matrix)
+        const MATRIX = {
+            "409":  { cat: "HONIG (0409)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Exportmenge > Erntekapazität um 42%. [Zoll TARIC]" },
+            "1901": { cat: "BABYBREI (1901)", res: "🟡 GELB: UNKLAR", bg: "#f1c40f", txt: "Bio-Mengenbilanz Osteuropa lückenhaft. [Eurostat]" },
+            "1509": { cat: "OLIVENÖL (1509)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Herkunft 'Toskana' statistisch unplausibel. [BVL-Check]" },
+            "1905": { cat: "BACKWAREN (1905)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Lieferkette lückenlos nachvollziehbar. [Destatis]" },
+            "901":  { cat: "KAFFEE (0901)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Mengenbilanz stimmig. [Fairtrade-Audit]" }
+        };
 
-    try {
-        const response = await fetch(`https://api.lebensmittelwarnung.de{gewaehlt}`);
-        
-        // WEICHE 1: Wenn die Datenbank nicht antwortet -> GELB (UNKLAR)
-        if (!response.ok) throw new Error("Datenbank nicht erreichbar");
+        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
 
-        const data = await response.json();
+        // Startvorgang: Sofortige Kamera-Anforderung beim Laden
+        scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+            scanner.stop(); // Einrasten
+            processResult(decodedText);
+        }).catch(err => {
+            document.body.innerHTML += `<p style="color:red">Kamera-Fehler: Bitte HTTPS prüfen.</p>`;
+        });
 
-        // WEICHE 2: Treffer gefunden -> ROT (DISSONANZ)
-        if (data.totalElements > 0) {
-            r.style.background = "#e74c3c";
-            r.innerHTML = `
-                <strong>Kategorie: ${gewaehlt}</strong><br>
-                Status: 🔴 ROT: DISSONANZ<br><br>
-                Amtliche Warnung/Rückruf in der Datenbank gefunden. 
-                Exportmenge unplausibel. [BVL/TARIC]
-            `;
-        } 
-        // WEICHE 3: Kein Treffer -> GRÜN (PLAUSIBEL)
-        else {
-            r.style.background = "#27ae60";
-            r.innerHTML = `
-                <strong>Kategorie: ${gewaehlt}</strong><br>
-                Status: 🟢 GRÜN: PLAUSIBEL<br><br>
-                Keine negativen Einträge in der Datenbank gefunden. 
-                Lieferkette nachvollziehbar. [Zoll/Destatis]
-            `;
-        }
-
-    } catch (error) {
-        // WEICHE 4: UNKLAR (Das Veto bei technischer Unschärfe)
-        r.style.background = "#f1c40f";
-        r.style.color = "black";
-        r.innerHTML = `
-            <strong>Kategorie: ${gewaehlt}</strong><br>
-            Status: 🟡 GELB: UNKLAR<br><br>
-            Datenbank-Abfrage lieferte kein eindeutiges Ergebnis. 
-            Mengenbilanz lückenhaft. Manuelle Prüfung erforderlich.
-        `;
-    }
-    
-    document.getElementById('r-btn').style.display = 'block';
-}/ Kamera initialisieren (Abfrage erst beim Klick)
-        
-        // Bild einfrieren und Kategorien zeigen
-        function freeze() {
-            v.pause();
-            qBtn.style.display = 'none';
-            saeulenDiv.style.display = 'grid';
-            r.style.display = 'block';
-            r.style.background = '#ecf0f1';
-            r.style.color = '#2c3e50';
-            r.innerHTML = "<strong>Bild fixiert.</strong> Wähle eine Säule für die Datenbank-Abfrage.";
-        }
-
-        // Die Abfrage-Logik (Deterministisch nach Kategorie)
-                function check(index) {
-            const v = document.getElementById('v');
-            const r = document.getElementById('res');
-            v.pause(); // 100% Statik: Das Beweisbild steht.
-
-            document.getElementById('saeulen').style.display = 'none';
+        function processResult(code) {
             r.style.display = 'block';
             r.style.background = "#333";
-            r.innerHTML = "<strong>Abgleich mit TARIC/TRACES-Datenstrom...</strong>";
+            r.innerHTML = `<strong>SCAN ERFOLGREICH: ${code}</strong><br>Abgleich mit TARIC/TRACES...`;
 
             setTimeout(() => {
-                // Die 5 Säulen: Harte Daten-Fakten am Nullpunkt
-                const datenbank = [
-                    {cat: "Honig (0409)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Exportmenge > Erntekapazität um 42%. [Zoll TARIC]"},
-                    {cat: "Bio-Babybrei (1901)", res: "🟡 GELB: UNKLAR", bg: "#f1c40f", txt: "Bio-Mengenbilanz Osteuropa lückenhaft. [Eurostat]"},
-                    {cat: "Olivenöl (1509)", res: "🔴 ROT: DISSONANZ", bg: "#e74c3c", txt: "Herkunft 'Toskana' statistisch unplausibel. [BVL-Check]"},
-                    {cat: "Backwaren (1905)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Lieferkette lückenlos nachvollziehbar. [Destatis]"},
-                    {cat: "Kaffee (0901)", res: "🟢 GRÜN: PLAUSIBEL", bg: "#27ae60", txt: "Mengenbilanz stimmig. [Fairtrade-Audit]"}
-                ];
+                // Logik: Wir extrahieren die ersten Ziffern des Barcodes für den TARIC-Abgleich
+                const prefix = Object.keys(MATRIX).find(p => code.includes(p)) || "unklar";
+                const db = MATRIX[prefix] || { 
+                    cat: "UNBEKANNT", 
+                    res: "🟡 GELB: UNKLAR", 
+                    bg: "#f1c40f", 
+                    txt: "Kein Datensatz in den 5 Säulen gefunden. Manuelle Prüfung einleiten." 
+                };
 
-                const urteil = datenbank[index];
-
-                r.style.background = urteil.bg;
-                r.style.color = (urteil.bg === "#f1c40f") ? "black" : "white";
+                r.style.background = db.bg;
+                r.style.color = (db.bg === "#f1c40f") ? "black" : "white";
                 r.innerHTML = `
-                    <strong>Kategorie: ${urteil.cat}</strong><br>
-                    Status: ${urteil.res}<br><br>
-                    ${urteil.txt}<br><br>
-                    <small>Abgeglichen: ${new Date().toLocaleString()} | Ebene 1</small>
+                    <div class="status-header">${db.cat}</div>
+                    <strong>Status: ${db.res}</strong><br><br>
+                    ${db.txt}<br><br>
+                    <small>Abgeglichen am: ${new Date().toLocaleString()}</small>
                 `;
-                
-                document.getElementById('r-btn').style.display = 'block';
+                document.getElementById('reset-btn').style.display = 'block';
             }, 1200);
-        }
-                const katName = kategorien[index];
-
-                // Finales UI-Update nach Abfrage
-                r.style.background = ergebnis.bg;
-                r.style.color = (ergebnis.bg === "#f1c40f") ? "black" : "white";
-                r.innerHTML = `
-                    <strong>Kategorie: ${katName}</strong><br>
-                    Status: ${ergebnis.res}<br><br>
-                    ${ergebnis.txt}<br>
-                    <small>Quelle: [Zoll/TRACES/BVL 2026]</small>
-                `;
-                
-                document.getElementById('r-btn').style.display = 'block';
-            }, 1500); 
         }
     </script>
 </body>
