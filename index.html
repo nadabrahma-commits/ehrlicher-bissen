@@ -29,15 +29,24 @@
         const v = document.getElementById('v');
         const r = document.getElementById('res');
 
-        // Deine stabile Kamera-Basis
-        async function startCam() {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                v.srcObject = s;
-                document.getElementById('s-btn').style.display = 'none';
-            } catch (e) {
-                alert("Kamera-Zugriff verweigert. Bitte HTTPS prüfen oder am Handy 'Erlauben' klicken.");
+                // Diese Funktion läuft im Hintergrund, sobald die Kamera an ist
+        async function scanVideoFeed() {
+            if (!v.paused) {
+                try {
+                    // Wir nutzen den nativen BarcodeDetector des Handys
+                    const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
+                    const barcodes = await barcodeDetector.detect(v);
+                    
+                    if (barcodes.length > 0) {
+                        const code = barcodes[0].rawValue;
+                        document.getElementById('barcode').value = code; // Schreibt Code ins Feld
+                        executeCheck(code); // Feuert SOFORT die API-Abfrage ab
+                    }
+                } catch (e) {
+                    // Falls der Browser das native Scannen nicht unterstützt
+                }
             }
+            if (detecting) requestAnimationFrame(scanVideoFeed);
         }
 
         async function executeCheck(code) {
