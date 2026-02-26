@@ -72,20 +72,33 @@
     const manual = document.getElementById("manual-area");
 
     function startSystem() {
-        landing.style.display = "none";
-        document.getElementById("scanner-area").style.display = "block"; // Kamera-Bereich einblenden
-        
-        const config = { fps: 20, qrbox: { width: 250, height: 180 }, aspectRatio: 1.0 };
+    // 1. Landingpage ausblenden, Scanner-Bereich anzeigen
+    landing.style.display = "none";
+    const scannerArea = document.getElementById("scanner-area");
+    scannerArea.style.display = "block"; 
+
+    // 2. RENDERING-PAUSE (Wichtig für das weiße Fenster!)
+    setTimeout(() => {
+        const config = { 
+            fps: 25, 
+            qrbox: { width: 250, height: 180 }, 
+            aspectRatio: 1.0 
+        };
         
         scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+            // Erfolg: Kurz vibrieren (falls unterstützt)
+            if (navigator.vibrate) navigator.vibrate(100);
+            
             scanner.stop().then(() => {
-                document.getElementById("scanner-area").style.display = "none"; // Nach Scan ausblenden
+                scannerArea.style.display = "none";
                 checkData(decodedText);
             });
         }).catch(err => {
-            alert("Kamera-Fehler: Bitte Zugriff erlauben!");
+            console.error("Kamera-Startfehler:", err);
+            alert("Kamera-Fehler: Bitte Zugriff erlauben oder Seite neu laden!");
         });
-    }
+    }, 300); // 300ms geben dem Browser Zeit, das Layout stabil zu zeichnen
+}
 
     function openManual() {
         landing.style.display = "none";
