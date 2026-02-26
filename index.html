@@ -4,28 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ehrlicher Bissen - Beweissicherung</title>
+    <!-- KORREKTUR: Absolut stabiler Link zur Library -->
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 20px; background: #f4f4f4; color: #2c3e50; margin: 0; }
         .app-container { max-width: 450px; margin: auto; background: #fff; padding: 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 550px; position: relative; overflow: hidden; }
         h1 { font-size: 1.8em; margin-bottom: 25px; font-weight: 900; letter-spacing: -1px; }
         
-        /* Zustands-Management CSS */
+        /* UI-STATES */
         #landing-page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; display: flex; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box; }
         #scanner-area, #manual-area, #res { display: none; }
 
-        /* Scanner-Fix */
+        /* SCANNER-FIX: Feste Mindesthöhe gegen Geometrie-Fehler */
         #reader { width: 100%; min-height: 350px; border-radius: 20px; border: 3px solid #2c3e50; overflow: hidden; background: #000; }
         
-        /* UI-Elemente */
         .btn-main { width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.2s; }
         .btn-scan { background: #2c3e50; color: #fff; }
         .btn-manual { background: #fff; color: #2c3e50; border: 2px solid #2c3e50; }
         #barcode-input { width: 85%; padding: 18px; border-radius: 12px; border: 2px solid #bdc3c7; font-size: 1.3em; text-align: center; margin-bottom: 15px; }
         
-        /* Ergebnis-Visualisierung */
         #res { padding: 25px; border-radius: 20px; text-align: left; color: #fff; line-height: 1.6; }
         .status-header { font-size: 1.4em; font-weight: 900; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase; }
+        .taric-link { display: inline-block; margin-top: 10px; color: white; text-decoration: underline; font-size: 0.85em; }
     </style>
 </head>
 <body>
@@ -33,45 +33,41 @@
 <div class="app-container">
     <h1>Ehrlicher Bissen</h1>
 
-    <!-- ZUSTAND 1: LANDINGPAGE -->
     <div id="landing-page">
         <h2 style="margin-bottom:40px;">Beweissicherung <br><small style="font-weight:400; opacity:0.7;">Ebene 1: Registerabfrage</small></h2>
         <button class="btn-main btn-scan" onclick="startSystem()">📷 BARCODE SCANNEN</button>
         <button class="btn-main btn-manual" onclick="openManual()">⌨️ MANUELL EINGEBEN</button>
     </div>
 
-    <!-- ZUSTAND 2: SCANNER -->
     <div id="scanner-area">
         <div id="reader"></div>
         <button class="btn-main" style="background:#7f8c8d; color:#fff; margin-top:15px;" onclick="location.reload()">❌ ABBRECHEN</button>
     </div>
 
-    <!-- ZUSTAND 3: MANUELL -->
     <div id="manual-area">
         <input type="number" id="barcode-input" placeholder="Barcode-Nummer..." inputmode="numeric">
         <button class="btn-main btn-scan" onclick="checkData(document.getElementById('barcode-input').value)">🔍 DATEN ABFRAGEN</button>
         <button class="btn-main" style="background:#7f8c8d; color:#fff;" onclick="location.reload()">ZURÜCK</button>
     </div>
 
-    <!-- ZUSTAND 4: ERGEBNIS -->
     <div id="res"></div>
     <button id="r-btn" class="btn-main" style="display:none; background:#2c3e50; color:#fff; margin-top:15px;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
 </div>
 
 <script>
-    // Globale Instanzen für präzisen Zugriff
-    let html5QrCode;
+    let html5QrCode; // Globaler Namespace
     const resBox = document.getElementById("res");
 
     async function startSystem() {
         document.getElementById("landing-page").style.display = "none";
         document.getElementById("scanner-area").style.display = "block";
         
+        // KORREKTUR: Instanziierung erst NACHDEM das Element sichtbar ist
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
 
-        // Präzisions-Timeout für Hardware-Initialisierung
+        // KORREKTUR: 400ms Gedenksekunde für den Browser-Layout-Prozess
         setTimeout(() => {
             const config = { 
                 fps: 25, 
@@ -90,10 +86,10 @@
                     });
                 }
             ).catch(err => {
-                console.error("Kamera-Ladefehler", err);
-                alert("Kamera-Zugriff verweigert.");
+                console.error("Hardware-Veto", err);
+                alert("Kamera-Fehler: Bitte HTTPS-Verbindung und Berechtigungen prüfen.");
             });
-        }, 350); 
+        }, 400); 
     }
 
     function openManual() {
@@ -111,7 +107,6 @@
         resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
 
         try {
-            // PRÄZISE URL-KONSTRUKTION
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxy = `https://api.allorigins.win{encodeURIComponent(target)}`;
             
@@ -125,7 +120,9 @@
                 const origins = (p.origins || p.countries || "Unbekannt").toLowerCase();
                 const tags = (p.categories_tags || []).join(" ").toLowerCase();
                 
-                // VALIDIERUNG DER KRITERIEN
+                // BEWEISKETTE ZOLL (TARIC BASIS)
+                const hsCodeBase = code.substring(0, 4); 
+                
                 const isNonEU = origins.includes("non-eu") || (!origins.includes("germany") && !origins.includes("eu"));
                 const isCritical = tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
                 
@@ -139,12 +136,14 @@
                     <strong>Produkt:</strong> ${p.product_name || 'N/A'}<br>
                     <strong>Herkunft:</strong> ${p.origins || 'Register-Check...'}<br>
                     <hr style="opacity:0.3; margin:10px 0;">
-                    <small>Beweissicherung erfolgt: ${new Date().toLocaleString()}</small>
+                    <strong>Beweiskette Zoll:</strong> HS-Gruppe ${hsCodeBase}<br>
+                    <a class="taric-link" href="https://taxation-customs.ec.europa.eu" target="_blank">Amtliche TARIC-Recherche öffnen</a><br>
+                    <small style="display:block; margin-top:10px; opacity:0.8;">Zeitstempel: ${new Date().toLocaleString()}</small>
                 `;
             } else { throw Error(); }
         } catch (e) {
             resBox.style.background = "#f1c40f"; resBox.style.color = "#000";
-            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Keine Beweiskette für ID ${code} verfügbar.`;
+            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>ID ${code} nicht im Register verifiziert.`;
         }
         document.getElementById("r-btn").style.display = "block";
     }
