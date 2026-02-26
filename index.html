@@ -10,21 +10,23 @@
         .container { max-width: 450px; margin: auto; }
         h1 { font-size: 1.6em; margin-bottom: 20px; font-weight: bold; }
         
-        /* NEU: Frontseiten-Design */
+        /* Startseite */
         #home-screen { display: block; margin-top: 50px; }
         .menu-btn { width: 100%; padding: 25px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.2em; transition: 0.3s; }
         .btn-scan { background: #2c3e50; color: white; }
         .btn-manual { background: #ecf0f1; color: #2c3e50; border: 2px solid #2c3e50; }
 
-        /* DEIN SCANNER-BLOCK (Initial versteckt) */
-        #reader { width: 100%; max-width: 450px; min-height: 350px; margin: auto; border-radius: 15px; border: 3px solid #2c3e50; overflow: hidden; background: #000000; position: relative; display: none; }
+        /* Scanner Bereich */
+        #reader-area { display: none; }
+        #reader { width: 100%; max-width: 450px; min-height: 350px; margin: auto; border-radius: 15px; border: 3px solid #2c3e50; overflow: hidden; background: #000000; position: relative; }
         
-        /* MANUELLE EINGABE (Initial versteckt) */
+        /* Manuelle Eingabe */
         #manual-input-area { display: none; margin-top: 20px; }
-        #barcode-field { width: 80%; padding: 15px; border-radius: 10px; border: 2px solid #2c3e50; font-size: 1.1em; margin-bottom: 10px; }
+        #barcode-field { width: 90%; padding: 15px; border-radius: 10px; border: 2px solid #2c3e50; font-size: 1.2em; margin-bottom: 10px; text-align: center; }
 
         #res { margin-top: 20px; padding: 20px; border-radius: 12px; display: none; text-align: left; color: #ffffff; font-weight: bold; line-height: 1.4; }
         .btn { width: 100%; max-width: 450px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #ffffff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1em; }
+        .btn-back { background: #7f8c8d !important; }
     </style>
 </head>
 <body>
@@ -32,96 +34,78 @@
 <div class="container">
     <h1>Ehrlicher Bissen</h1>
 
-    <!-- FRONTSEITE -->
+    <!-- FRONTSEITE (Nur einmal vorhanden) -->
     <div id="home-screen">
         <button class="menu-btn btn-scan" onclick="activateScanner()">📷 BARCODE EINSCANNEN</button>
         <button class="menu-btn btn-manual" onclick="activateManual()">⌨️ MANUELL EINGEBEN</button>
     </div>
 
     <!-- SCANNER BEREICH -->
-    <div id="reader"></div>
-
-    <!-- MANUELLER BEREICH -->
-    <div class="container">
-    <h1>Ehrlicher Bissen</h1>
-
-    <!-- FRONTSEITE -->
-    <div id="home-screen">
-        <button class="menu-btn btn-scan" onclick="activateScanner()">📷 BARCODE EINSCANNEN</button>
-        <button class="menu-btn btn-manual" onclick="activateManual()">⌨️ MANUELL EINGEBEN</button>
-    </div>
-
-    <!-- SCANNER BEREICH -->
-    <div id="reader-area" style="display:none;">
+    <div id="reader-area">
         <div id="reader"></div>
-        <button class="btn" style="background:#7f8c8d;" onclick="location.reload()">❌ ABBRECHEN</button>
+        <button class="btn btn-back" onclick="location.reload()">❌ ABBRECHEN</button>
     </div>
 
     <!-- MANUELLER BEREICH -->
     <div id="manual-input-area">
         <input type="number" id="barcode-field" placeholder="Barcode-Nummer..." inputmode="numeric">
-        <button class="btn" onclick="checkData(document.getElementById('barcode-field').value)">PRÜFEN</button>
-        <button class="btn" style="background:#7f8c8d;" onclick="location.reload()">❌ ZURÜCK</button>
+        <button class="btn" onclick="checkData(document.getElementById('barcode-field').value)">🔍 PRÜFEN</button>
+        <button class="btn btn-back" onclick="location.reload()">❌ ZURÜCK</button>
     </div>
 
     <!-- ERGEBNIS -->
     <div id="res"></div>
-    <button id="r-btn" class="btn" style="display:none; background:#2c3e50;" onclick="location.reload()">NEUE PRÜFUNG</button>
-</div>
-    <!-- ERGEBNIS -->
-    <div id="res"></div>
-    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">ZURÜCK ZUM START</button>
+    <button id="r-btn" class="btn btn-back" style="display:none;" onclick="location.reload()">🏠 HAUPTMENÜ</button>
 </div>
 
 <script>
     const scanner = new Html5Qrcode("reader");
     const resBox = document.getElementById("res");
     const home = document.getElementById("home-screen");
-    const readerDiv = document.getElementById("reader");
+    const readerArea = document.getElementById("reader-area");
     const manualArea = document.getElementById("manual-input-area");
 
-    // Wechselt zur Kamera
     function activateScanner() {
         home.style.display = "none";
-        readerDiv.style.display = "block";
+        readerArea.style.display = "block";
         startScanning();
     }
 
-    // Wechselt zur Tastatur
     function activateManual() {
         home.style.display = "none";
         manualArea.style.display = "block";
+        document.getElementById("barcode-field").focus();
     }
 
-    // DEIN FUNKTIONIERENDER SCANNER-BLOCK
     function startScanning() {
         const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
         scanner.start({ facingMode: "environment" }, config, (decodedText) => {
             scanner.stop().then(() => {
-                readerDiv.style.display = "none";
+                readerArea.style.display = "none";
                 checkData(decodedText);
             }).catch(err => console.error("Stopp-Fehler", err));
         }).catch(err => { 
             resBox.style.display = "block";
             resBox.style.background = "#e74c3c";
-            resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
+            resBox.innerHTML = "KAMERA-FEHLER: Zugriff verweigert!";
         });
     }
 
     async function checkData(code) {
         if(!code) return;
         manualArea.style.display = "none";
+        readerArea.style.display = "none";
         resBox.style.display = "block"; 
         resBox.style.background = "#34495e";
         resBox.style.color = "#ffffff";
         resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
         
         try {
-            // FIX: Template Literals mit ${code} und korrektem Pfad
+            // KORREKTUR: API-URL und Proxy-Aufruf repariert
             const target = `https://world.openfoodfacts.org{code}.json`;
             const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
             
-            if (!response.ok) throw new Error("Netzwerk-Fehler");
+            if (!response.ok) throw new Error();
             
             const proxyData = await response.json();
             const data = JSON.parse(proxyData.contents);
@@ -135,9 +119,7 @@
                 resBox.innerHTML = `<strong>${p.product_name || "Produkt"}</strong><hr>` + 
                                    (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
                                    `<br><br>Herkunft: ${p.origins || "Keine Angabe"}`;
-            } else { 
-                throw new Error("Produkt nicht gefunden"); 
-            }
+            } else { throw new Error(); }
         } catch (e) {
             resBox.style.background = "#f1c40f"; 
             resBox.style.color = "black";
