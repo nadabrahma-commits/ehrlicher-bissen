@@ -4,135 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ehrlicher Bissen - Ebene 1</title>
-    <!-- WICHTIG: Korrekter Link zur Library -->
-    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        /* LAYOUT SCHUTZ */
-        body { 
-            font-family: sans-serif; 
-            text-align: center; 
-            padding: 20px; 
-            background: #ffffff; 
-            color: #2c3e50; 
-            margin: 0; 
-        }
-        h1 { 
-            font-size: 1.6em; 
-            margin-bottom: 20px; 
-            font-weight: bold; 
-            position: relative; 
-            z-index: 10; 
-        }
-        /* KAMARA-FENSTER FIXIERUNG */
-        #reader { 
-            width: 100% !important; 
-            max-width: 450px; 
-            min-height: 300px;
-            margin: auto; 
-            border-radius: 15px; 
-            border: 3px solid #2c3e50; 
-            overflow: hidden; 
-            background: #000000; 
-            position: relative; 
-        }
-        #reader video { 
-            width: 100% !important; 
-            height: auto !important; 
-            object-fit: cover !important; 
-        }
-        /* ERGEBNIS-BOX */
-        #res { 
-            margin-top: 20px; 
-            padding: 20px; 
-            border-radius: 12px; 
-            display: none; 
-            text-align: left; 
-            color: #ffffff; 
-            font-weight: bold; 
-            line-height: 1.4; 
-            position: relative; 
-            z-index: 10; 
-        }
-        .btn { 
-            width: 100%; 
-            max-width: 450px; 
-            padding: 20px; 
-            margin-top: 15px; 
-            background: #2c3e50; 
-            color: #ffffff; 
-            border: none; 
-            border-radius: 12px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            font-size: 1.1em; 
-        }
-        /* Blendet Library-Interface-Texte aus */
-        #reader__status_span, #reader__dashboard_section_swaplink { display: none !important; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #ffffff; color: #2c3e50; margin: 0; }
+        h1 { font-size: 1.6em; margin-bottom: 20px; font-weight: bold; }
+        #reader { width: 100%; max-width: 450px; min-height: 350px; margin: auto; border-radius: 15px; border: 3px solid #2c3e50; overflow: hidden; background: #000000; position: relative; }
+        #res { margin-top: 20px; padding: 20px; border-radius: 12px; display: none; text-align: left; color: #ffffff; font-weight: bold; line-height: 1.4; }
+        .btn { width: 100%; max-width: 450px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #ffffff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1em; }
     </style>
 </head>
 <body>
+    <h1>Ehrlicher Bissen</h1>
+    <div id="reader"></div>
+    <div id="res"></div>
+    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NEUE PRÜFUNG</button>
 
-    <div style="max-width: 480px; margin: 0 auto;">
-        <h1>Ehrlicher Bissen</h1>
-        <div id="reader"></div>
-        <div id="res"></div>
-        <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NEUE PRÜFUNG</button>
-    </div>
+<script>
+    const scanner = new Html5Qrcode("reader");
+    const resBox = document.getElementById("res");
+    const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
 
-    <script>
-        const scanner = new Html5Qrcode("reader");
-        const resBox = document.getElementById("res");
-        const config = { fps: 20, qrbox: { width: 250, height: 180 }, aspectRatio: 1.0 };
+    scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+        scanner.stop().then(() => {
+            document.getElementById("reader").style.display = "none";
+            checkData(decodedText);
+        }).catch(err => console.error("Stopp-Fehler", err));
+    }).catch(err => { 
+        resBox.style.display = "block";
+        resBox.style.background = "#e74c3c";
+        resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
+    });
 
-        // Scanner Start
-        scanner.start({ facingMode: "environment" }, config, (decodedText) => {
-            scanner.stop().then(() => {
-                document.getElementById("reader").style.display = "none";
-                checkData(decodedText);
-            }).catch(err => console.error("Stopp-Fehler", err));
-        }).catch(err => { 
-            resBox.style.display = "block";
-            resBox.style.background = "#e74c3c";
-            resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
-        });
-
-        async function checkData(code) {
-            resBox.style.display = "block"; 
-            resBox.style.background = "#34495e";
-            resBox.style.color = "#ffffff"; // Standard Weiß
-            resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
+    async function checkData(code) {
+        resBox.style.display = "block"; 
+        resBox.style.background = "#34495e";
+        resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
+        
+        try {
+            // KORREKTUR: Pfad mit /api/v2/product/ und ${code}
+            const target = `https://world.openfoodfacts.org{code}.json`;
+            // KORREKTUR: /get?url= und ${encodeURIComponent...}
+            const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
             
-            try {
-                // API Pfad & Proxy (Korrekt mit Backticks und $)
-                const target = `https://world.openfoodfacts.org{code}.json`;
-                const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
-                
-                if (!response.ok) throw new Error();
-                
-                const proxyData = await response.json();
-                const data = JSON.parse(proxyData.contents);
+            if (!response.ok) throw new Error("Netzwerk-Fehler");
+            
+            const proxyData = await response.json();
+            const data = JSON.parse(proxyData.contents);
 
-                if (data.product) {
-                    const p = data.product;
-                    const tags = (p.categories_tags || []).join(" ").toLowerCase();
-                    // Logik für "Böse" Produkte
-                    const isBad = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
-                    
-                    resBox.style.background = isBad ? "#e74c3c" : "#27ae60";
-                    resBox.innerHTML = `<strong>${p.product_name || "Produkt"}</strong><hr>` + 
-                                       (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
-                                       `<br><br>Herkunft: ${p.origins || "Unbekannt"}`;
-                } else { 
-                    throw new Error("Nicht gelistet"); 
-                }
-            } catch (e) {
-                // GELBE ANZEIGE für unbekannte Produkte / Schattenware
-                resBox.style.background = "#f1c40f"; 
-                resBox.style.color = "#000000"; // Schwarz auf Gelb für Lesbarkeit
-                resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert oder Offline.`;
+            if (data.product) {
+                const p = data.product;
+                const tags = (p.categories_tags || []).join(" ").toLowerCase();
+                const isBad = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
+                
+                resBox.style.background = isBad ? "#e74c3c" : "#27ae60";
+                resBox.innerHTML = `<strong>${p.product_name || "Unbekanntes Produkt"}</strong><hr>` + 
+                                   (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
+                                   `<br><br>Herkunft: ${p.origins || "Keine Angabe"}`;
+            } else { 
+                throw new Error("Produkt nicht gefunden"); 
             }
-            document.getElementById("r-btn").style.display = "block";
+        } catch (e) {
+            resBox.style.background = "#f1c40f"; 
+            resBox.style.color = "black";
+            resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert oder Offline.`;
         }
-    </script>
+        document.getElementById("r-btn").style.display = "block";
+    }
+</script>
 </body>
 </html>
