@@ -42,11 +42,32 @@
     <div id="reader"></div>
 
     <!-- MANUELLER BEREICH -->
-    <div id="manual-input-area">
-        <input type="text" id="barcode-field" placeholder="Barcode-Nummer...">
-        <button class="btn" onclick="checkData(document.getElementById('barcode-field').value)">PRÜFEN</button>
+    <div class="container">
+    <h1>Ehrlicher Bissen</h1>
+
+    <!-- FRONTSEITE -->
+    <div id="home-screen">
+        <button class="menu-btn btn-scan" onclick="activateScanner()">📷 BARCODE EINSCANNEN</button>
+        <button class="menu-btn btn-manual" onclick="activateManual()">⌨️ MANUELL EINGEBEN</button>
     </div>
 
+    <!-- SCANNER BEREICH -->
+    <div id="reader-area" style="display:none;">
+        <div id="reader"></div>
+        <button class="btn" style="background:#7f8c8d;" onclick="location.reload()">❌ ABBRECHEN</button>
+    </div>
+
+    <!-- MANUELLER BEREICH -->
+    <div id="manual-input-area">
+        <input type="number" id="barcode-field" placeholder="Barcode-Nummer..." inputmode="numeric">
+        <button class="btn" onclick="checkData(document.getElementById('barcode-field').value)">PRÜFEN</button>
+        <button class="btn" style="background:#7f8c8d;" onclick="location.reload()">❌ ZURÜCK</button>
+    </div>
+
+    <!-- ERGEBNIS -->
+    <div id="res"></div>
+    <button id="r-btn" class="btn" style="display:none; background:#2c3e50;" onclick="location.reload()">NEUE PRÜFUNG</button>
+</div>
     <!-- ERGEBNIS -->
     <div id="res"></div>
     <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">ZURÜCK ZUM START</button>
