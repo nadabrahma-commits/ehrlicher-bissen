@@ -1,112 +1,89 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ehrlicher Bissen - MASTER</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ehrlicher Bissen - Ebene 1</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #fff; padding: 10px; }
-        video { width: 100%; max-width: 500px; background: #000; border-radius: 12px; border: 2px solid #2c3e50; }
-        .btn { width: 100%; max-width: 500px; padding: 18px; margin-top: 10px; background: #2c3e50; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 12px; }
-        #res { margin-top: 20px; padding: 20px; border-radius: 12px; display: none; text-align: left; color: white; font-weight: bold; }
-        input { width: 80%; max-width: 400px; padding: 15px; margin-top: 10px; border: 2px solid #2c3e50; border-radius: 8px; font-size: 1.1em; }
-    </style>
+    /* DEIN LAYOUT - SORGFÄLTIG UND SERIÖS */
+    body { font-family: sans-serif; text-align: center; padding: 20px; background: #f8f9fa; color: #2c3e50; margin: 0; }
+    h1 { font-size: 1.6em; margin-bottom: 20px; color: #2c3e50; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* DER SCANNER-RAHMEN */
+    #reader { width: 100%; max-width: 450px; min-height: 300px; margin: 0 auto; border-radius: 15px; border: 4px solid #2c3e50; overflow: hidden; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+    /* MANUELLE EINGABE (Plan B) */
+    .input-group { margin-top: 20px; max-width: 450px; margin-left: auto; margin-right: auto; }
+    input[type="number"] { width: 80%; padding: 15px; border: 2px solid #bdc3c7; border-radius: 10px; font-size: 1.1em; outline: none; }
+
+    /* ERGEBNIS-BOX (Das wortgewordene Urteil) */
+    #res { margin: 20px auto; padding: 20px; max-width: 410px; border-radius: 12px; display: none; text-align: left; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+    /* DIE PROFI-BUTTONS */
+    .btn { width: 100%; max-width: 450px; padding: 18px; margin-top: 10px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.3s; }
+    .btn-main { background: #2c3e50; color: #fff; }
+    .btn-reset { background: #7f8c8d; color: #fff; display: none; }
+</style>
+
 </head>
 <body>
     <h1>Ehrlicher Bissen</h1>
-    <video id="v" autoplay playsinline muted></video>
-    
-    <button id="s-btn" class="btn" onclick="startCam()">1. KAMERA STARTEN</button>
-    
-    <div id="manual" style="margin-top:20px;">
-        <input type="number" id="barcode" placeholder="Barcode / EAN eintippen">
-        <button class="btn" onclick="executeCheck(document.getElementById('barcode').value)">2. DATENBANK ABFRAGEN</button>
-    </div>
-
+    <div id="reader"></div>
     <div id="res"></div>
-    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NÄCHSTER SCAN</button>
+    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NEUE PRÜFUNG</button>
 
-    <script>
-        const v = document.getElementById('v');
-        const r = document.getElementById('res');
-        let scannerAktiv = false;
+<script>
+    const scanner = new Html5Qrcode("reader");
+    const resBox = document.getElementById("res");
+    const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
 
-        // 1. HARDWARE-START: Unbestechlich & Direkt
-        async function start() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", focusMode: "continuous" } 
-                });
-                v.srcObject = stream;
-                v.setAttribute("playsinline", true); // Wichtig für iOS
-                v.play();
+    scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+        scanner.stop().then(() => {
+            document.getElementById("reader").style.display = "none";
+            checkData(decodedText);
+        }).catch(err => console.error("Stopp-Fehler", err));
+    }).catch(err => { 
+        resBox.style.display = "block";
+        resBox.style.background = "#e74c3c";
+        resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
+    });
+
+    async function checkData(code) {
+        resBox.style.display = "block"; 
+        resBox.style.background = "#34495e";
+        resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
+        
+        try {
+            // KORREKTUR: Pfad mit /api/v2/product/ und ${code}
+            const target = `https://world.openfoodfacts.org{code}.json`;
+            // KORREKTUR: /get?url= und ${encodeURIComponent...}
+            const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
+            
+            if (!response.ok) throw new Error("Netzwerk-Fehler");
+            
+            const proxyData = await response.json();
+            const data = JSON.parse(proxyData.contents);
+
+            if (data.product) {
+                const p = data.product;
+                const tags = (p.categories_tags || []).join(" ").toLowerCase();
+                const isBad = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
                 
-                document.getElementById('s-btn').style.display = 'none';
-                scannerAktiv = true;
-                
-                // Native Barcode-Erkennung (Standard 2026)
-                if ('BarcodeDetector' in window) {
-                    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
-                    const scanLoop = async () => {
-                        if (!scannerAktiv) return;
-                        const barcodes = await detector.detect(v);
-                        if (barcodes.length > 0) {
-                            scannerAktiv = false;
-                            v.pause();
-                            executeCheck(barcodes[0].rawValue); // Übergabe an DB
-                        } else {
-                            requestAnimationFrame(scanLoop);
-                        }
-                    };
-                    scanLoop();
-                } else {
-                    // Fallback: Manueller Hinweis, falls Native API fehlt
-                    r.style.display = 'block';
-                    r.style.background = "#34495e";
-                    r.innerHTML = "Kamera aktiv. Bitte Barcode zentrieren oder manuell eintippen.";
-                }
-            } catch (err) {
-                alert("KAMERA-BLOCKADE: Bitte klicke oben auf das Schloss-Symbol und erlaube den Zugriff!");
+                resBox.style.background = isBad ? "#e74c3c" : "#27ae60";
+                resBox.innerHTML = `<strong>${p.product_name || "Unbekanntes Produkt"}</strong><hr>` + 
+                                   (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
+                                   `<br><br>Herkunft: ${p.origins || "Keine Angabe"}`;
+            } else { 
+                throw new Error("Produkt nicht gefunden"); 
             }
+        } catch (e) {
+            resBox.style.background = "#f1c40f"; 
+            resBox.style.color = "black";
+            resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert oder Offline.`;
         }
-
-        // 2. DATENBANK-ABFRAGE (Schnittstelle über AllOrigins)
-        async function executeCheck(code) {
-            if(!code) return;
-            r.style.display = 'block';
-            r.style.background = "#34495e";
-            r.style.color = "white";
-            r.innerHTML = `<strong>ABGLEICH: ${code}</strong><br>Datenbank-Abfrage läuft...`;
-
-            try {
-                const proxy = "https://api.allorigins.win";
-                const target = `https://world.openfoodfacts.org{code}.json`;
-                const response = await fetch(proxy + encodeURIComponent(target));
-                const proxyData = await response.json();
-                const data = JSON.parse(proxyData.contents);
-
-                if (data.status === 1) {
-                    const p = data.product;
-                    const tags = p.categories_tags?.join(" ").toLowerCase() || "";
-                    
-                    // DIE 5 SÄULEN (Honig/Öl/etc.)
-                    if (tags.includes("honey") || tags.includes("honig") || code.startsWith("0409")) {
-                        renderResult(p.product_name, "🔴 ROT: DISSONANZ (0409)", "#e74c3c", "Exportmenge > Erntekapazität. [TARIC/Zoll]");
-                    } else {
-                        renderResult(p.product_name, "🟢 GRÜN: PLAUSIBEL", "#27ae60", "Lieferkette laut Register konsistent.");
-                    }
-                } else { throw new Error(); }
-            } catch (e) {
-                renderResult("ID: " + code, "🟡 GELB: UNKLAR", "#f1c40f", "Nicht im EU-Register gelistet. Mögliche Schatten-Einfuhr.");
-            }
-        }
-
-        function renderResult(name, status, bg, txt) {
-            r.style.background = bg;
-            r.style.color = (bg === "#f1c40f") ? "black" : "white";
-            r.innerHTML = `<strong>${name}</strong><br>Status: ${status}<br><br>${txt}<br><br><button class="btn" style="background:#555;" onclick="location.reload()">NEUER SCAN</button>`;
-        }
-            document.getElementById('r-btn').style.display = 'block';
-        }
-    </script>
+        document.getElementById("r-btn").style.display = "block";
+    }
+</script>
 </body>
 </html>
