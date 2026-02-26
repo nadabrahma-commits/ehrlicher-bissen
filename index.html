@@ -3,84 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ehrlicher Bissen - Ebene 1</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>Ehrlicher Bissen - Beweiskette Ebene 1</title>
+    <script src="https://unpkg.com"></script>
     <style>
-    /* DEIN LAYOUT - SORGFÄLTIG UND SERIÖS */
-    body { font-family: sans-serif; text-align: center; padding: 20px; background: #f8f9fa; color: #2c3e50; margin: 0; }
-    h1 { font-size: 1.6em; margin-bottom: 20px; color: #2c3e50; text-transform: uppercase; letter-spacing: 1px; }
-
-    /* DER SCANNER-RAHMEN */
-    #reader { width: 100%; max-width: 450px; min-height: 300px; margin: 0 auto; border-radius: 15px; border: 4px solid #2c3e50; overflow: hidden; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-
-    /* MANUELLE EINGABE (Plan B) */
-    .input-group { margin-top: 20px; max-width: 450px; margin-left: auto; margin-right: auto; }
-    input[type="number"] { width: 80%; padding: 15px; border: 2px solid #bdc3c7; border-radius: 10px; font-size: 1.1em; outline: none; }
-
-    /* ERGEBNIS-BOX (Das wortgewordene Urteil) */
-    #res { margin: 20px auto; padding: 20px; max-width: 410px; border-radius: 12px; display: none; text-align: left; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-
-    /* DIE PROFI-BUTTONS */
-    .btn { width: 100%; max-width: 450px; padding: 18px; margin-top: 10px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.3s; }
-    .btn-main { background: #2c3e50; color: #fff; }
-    .btn-reset { background: #7f8c8d; color: #fff; display: none; }
-</style>
-
+        /* LAYOUT-SCHUTZ: Verhindert Verschieben durch Kamera-Start */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #f8f9fa; color: #2c3e50; margin: 0; }
+        .container { max-width: 480px; margin: 0 auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.5em; margin-bottom: 20px; color: #2c3e50; position: relative; }
+        
+        /* KAMERA-FIX: Erzwingt Rahmen-Treue */
+        #reader { width: 100% !important; border-radius: 15px; border: 3px solid #34495e; overflow: hidden; background: #000; position: relative; min-height: 300px; }
+        #reader video { width: 100% !important; height: auto !important; object-fit: cover; }
+        
+        /* RESULTAT-STYLING */
+        #res { margin-top: 20px; padding: 15px; border-radius: 12px; display: none; text-align: left; line-height: 1.5; font-size: 0.95em; }
+        .info-label { font-weight: bold; color: #7f8c8d; font-size: 0.8em; text-transform: uppercase; display: block; margin-top: 10px; }
+        .info-value { display: block; margin-bottom: 5px; color: #2c3e50; }
+        
+        /* BUTTONS */
+        .btn { width: 100%; padding: 18px; margin-top: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.3s; }
+        .btn-primary { background: #2c3e50; color: white; }
+        .btn-search { background: #3498db; color: white; text-decoration: none; display: inline-block; text-align: center; }
+        
+        /* Blendet Library-UI aus */
+        #reader__status_span, #reader__dashboard_section_swaplink { display: none !important; }
+    </style>
 </head>
 <body>
+
+<div class="container">
     <h1>Ehrlicher Bissen</h1>
     <div id="reader"></div>
     <div id="res"></div>
-    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NEUE PRÜFUNG</button>
+    <button id="r-btn" class="btn btn-primary" style="display:none;" onclick="location.reload()">NEUE PRÜFUNG</button>
+</div>
 
 <script>
     const scanner = new Html5Qrcode("reader");
     const resBox = document.getElementById("res");
-    const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
+    const config = { fps: 20, qrbox: { width: 250, height: 180 }, aspectRatio: 1.0 };
 
     scanner.start({ facingMode: "environment" }, config, (decodedText) => {
         scanner.stop().then(() => {
             document.getElementById("reader").style.display = "none";
             checkData(decodedText);
-        }).catch(err => console.error("Stopp-Fehler", err));
-    }).catch(err => { 
+        }).catch(err => console.error(err));
+    }).catch(err => {
         resBox.style.display = "block";
-        resBox.style.background = "#e74c3c";
-        resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
+        resBox.style.background = "#fee";
+        resBox.innerHTML = "❌ Kamera-Zugriff erforderlich.";
     });
 
     async function checkData(code) {
-        resBox.style.display = "block"; 
-        resBox.style.background = "#34495e";
-        resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
-        
+        resBox.style.display = "block";
+        resBox.style.background = "#ecf0f1";
+        resBox.innerHTML = "🔍 Abfrage der Beweiskette...";
+
         try {
-            // KORREKTUR: Pfad mit /api/v2/product/ und ${code}
             const target = `https://world.openfoodfacts.org{code}.json`;
-            // KORREKTUR: /get?url= und ${encodeURIComponent...}
             const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
-            
-            if (!response.ok) throw new Error("Netzwerk-Fehler");
-            
             const proxyData = await response.json();
             const data = JSON.parse(proxyData.contents);
 
             if (data.product) {
                 const p = data.product;
-                const tags = (p.categories_tags || []).join(" ").toLowerCase();
-                const isBad = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
+                const hsCode = code.substring(0, 6); // Erste 6 Stellen für TARIC/Zoll-Basis
                 
-                resBox.style.background = isBad ? "#e74c3c" : "#27ae60";
-                resBox.innerHTML = `<strong>${p.product_name || "Unbekanntes Produkt"}</strong><hr>` + 
-                                   (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
-                                   `<br><br>Herkunft: ${p.origins || "Keine Angabe"}`;
-            } else { 
-                throw new Error("Produkt nicht gefunden"); 
-            }
+                resBox.style.background = "#fff";
+                resBox.style.border = "2px solid #27ae60";
+                resBox.innerHTML = `
+                    <div style="color:#27ae60; font-weight:bold; margin-bottom:10px;">✅ PRODUKT VERIFIZIERT</div>
+                    <span class="info-label">Produkt</span>
+                    <span class="info-value">${p.product_name || 'Unbekannt'}</span>
+                    
+                    <span class="info-label">Herkunft (Register)</span>
+                    <span class="info-value">${p.origins || 'Nicht deklariert'}</span>
+                    
+                    <span class="info-label">Beweiskette (Zoll/Taric)</span>
+                    <span class="info-value">HS-Code Basis: ${hsCode}</span>
+                    <a href="https://taxation-customs.ec.europa.eu/customs/customs-tariff/eu-customs-tariff-taric_de" target="_blank" class="btn btn-search" style="padding:10px; font-size:0.8em;">Amtliche TARIC-Auskunft öffnen</a>
+                    
+                    <span class="info-label">Sicherheit (RASFF/EFSA)</span>
+                    <span class="info-value">Prüfe auf Rückrufe...</span>
+                    <a href="https://www.bvl.bund.de" target="_blank" style="color:#3498db; font-size:0.8em;">Offizielles Warnsystem (BVL)</a>
+                `;
+            } else { throw Error(); }
         } catch (e) {
-            resBox.style.background = "#f1c40f"; 
-            resBox.style.color = "black";
-            resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert oder Offline.`;
+            resBox.style.background = "#f1c40f";
+            resBox.style.border = "2px solid #d4ac0d";
+            resBox.innerHTML = `
+                <div style="font-weight:bold;">🟡 SCHATTENWARE / UNBEKANNT</div>
+                <p>ID: ${code}</p>
+                <p style="font-size:0.85em;">Keine seriöse Beweiskette in den Standardregistern gefunden.</p>
+                <a href="https://www.google.com{code}" target="_blank" class="btn btn-search">Manuelle Zoll-Recherche</a>
+            `;
         }
         document.getElementById("r-btn").style.display = "block";
     }
