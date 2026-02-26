@@ -7,43 +7,97 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #ffffff; color: #2c3e50; margin: 0; }
+        .container { max-width: 450px; margin: auto; }
         h1 { font-size: 1.6em; margin-bottom: 20px; font-weight: bold; }
-        #reader { width: 100%; max-width: 450px; min-height: 350px; margin: auto; border-radius: 15px; border: 3px solid #2c3e50; overflow: hidden; background: #000000; position: relative; }
+        
+        /* NEU: Frontseiten-Design */
+        #home-screen { display: block; margin-top: 50px; }
+        .menu-btn { width: 100%; padding: 25px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.2em; transition: 0.3s; }
+        .btn-scan { background: #2c3e50; color: white; }
+        .btn-manual { background: #ecf0f1; color: #2c3e50; border: 2px solid #2c3e50; }
+
+        /* DEIN SCANNER-BLOCK (Initial versteckt) */
+        #reader { width: 100%; max-width: 450px; min-height: 350px; margin: auto; border-radius: 15px; border: 3px solid #2c3e50; overflow: hidden; background: #000000; position: relative; display: none; }
+        
+        /* MANUELLE EINGABE (Initial versteckt) */
+        #manual-input-area { display: none; margin-top: 20px; }
+        #barcode-field { width: 80%; padding: 15px; border-radius: 10px; border: 2px solid #2c3e50; font-size: 1.1em; margin-bottom: 10px; }
+
         #res { margin-top: 20px; padding: 20px; border-radius: 12px; display: none; text-align: left; color: #ffffff; font-weight: bold; line-height: 1.4; }
         .btn { width: 100%; max-width: 450px; padding: 20px; margin-top: 15px; background: #2c3e50; color: #ffffff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1em; }
     </style>
 </head>
 <body>
+
+<div class="container">
     <h1>Ehrlicher Bissen</h1>
+
+    <!-- FRONTSEITE -->
+    <div id="home-screen">
+        <button class="menu-btn btn-scan" onclick="activateScanner()">📷 BARCODE EINSCANNEN</button>
+        <button class="menu-btn btn-manual" onclick="activateManual()">⌨️ MANUELL EINGEBEN</button>
+    </div>
+
+    <!-- SCANNER BEREICH -->
     <div id="reader"></div>
+
+    <!-- MANUELLER BEREICH -->
+    <div id="manual-input-area">
+        <input type="text" id="barcode-field" placeholder="Barcode-Nummer...">
+        <button class="btn" onclick="checkData(document.getElementById('barcode-field').value)">PRÜFEN</button>
+    </div>
+
+    <!-- ERGEBNIS -->
     <div id="res"></div>
-    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">NEUE PRÜFUNG</button>
+    <button id="r-btn" class="btn" style="display:none; background:#7f8c8d;" onclick="location.reload()">ZURÜCK ZUM START</button>
+</div>
 
 <script>
     const scanner = new Html5Qrcode("reader");
     const resBox = document.getElementById("res");
-    const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
+    const home = document.getElementById("home-screen");
+    const readerDiv = document.getElementById("reader");
+    const manualArea = document.getElementById("manual-input-area");
 
-    scanner.start({ facingMode: "environment" }, config, (decodedText) => {
-        scanner.stop().then(() => {
-            document.getElementById("reader").style.display = "none";
-            checkData(decodedText);
-        }).catch(err => console.error("Stopp-Fehler", err));
-    }).catch(err => { 
-        resBox.style.display = "block";
-        resBox.style.background = "#e74c3c";
-        resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
-    });
+    // Wechselt zur Kamera
+    function activateScanner() {
+        home.style.display = "none";
+        readerDiv.style.display = "block";
+        startScanning();
+    }
+
+    // Wechselt zur Tastatur
+    function activateManual() {
+        home.style.display = "none";
+        manualArea.style.display = "block";
+    }
+
+    // DEIN FUNKTIONIERENDER SCANNER-BLOCK
+    function startScanning() {
+        const config = { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
+        scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+            scanner.stop().then(() => {
+                readerDiv.style.display = "none";
+                checkData(decodedText);
+            }).catch(err => console.error("Stopp-Fehler", err));
+        }).catch(err => { 
+            resBox.style.display = "block";
+            resBox.style.background = "#e74c3c";
+            resBox.innerHTML = "HARDWARE-VETO: Kamera-Zugriff verweigert!";
+        });
+    }
 
     async function checkData(code) {
+        if(!code) return;
+        manualArea.style.display = "none";
         resBox.style.display = "block"; 
         resBox.style.background = "#34495e";
+        resBox.style.color = "#ffffff";
         resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
         
         try {
-            // KORREKTUR: Pfad mit /api/v2/product/ und ${code}
+            // FIX: Template Literals mit ${code} und korrektem Pfad
             const target = `https://world.openfoodfacts.org{code}.json`;
-            // KORREKTUR: /get?url= und ${encodeURIComponent...}
             const response = await fetch(`https://api.allorigins.win{encodeURIComponent(target)}`);
             
             if (!response.ok) throw new Error("Netzwerk-Fehler");
@@ -57,7 +111,7 @@
                 const isBad = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
                 
                 resBox.style.background = isBad ? "#e74c3c" : "#27ae60";
-                resBox.innerHTML = `<strong>${p.product_name || "Unbekanntes Produkt"}</strong><hr>` + 
+                resBox.innerHTML = `<strong>${p.product_name || "Produkt"}</strong><hr>` + 
                                    (isBad ? "🔴 ROT: DISSONANZ (Honig/Herkunft)" : "🟢 GRÜN: OK") + 
                                    `<br><br>Herkunft: ${p.origins || "Keine Angabe"}`;
             } else { 
@@ -66,7 +120,7 @@
         } catch (e) {
             resBox.style.background = "#f1c40f"; 
             resBox.style.color = "black";
-            resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert oder Offline.`;
+            resBox.innerHTML = `<strong>ID: ${code}</strong><hr>🟡 GELB: SCHATTENWARE<br><br>Nicht im Register verifiziert.`;
         }
         document.getElementById("r-btn").style.display = "block";
     }
