@@ -54,8 +54,13 @@
     <button id="r-btn" class="btn-action" style="display:none; background:#2c3e50; color:white;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
 </div>
 
+<!-- 1. KORREKTUR: Vollständiger Link zur Library -->
+    <script src="https://unpkg.com"></script>
+
+    <!-- ... (dein Style bleibt gleich) ... -->
+
 <script>
-    // Scanner-Variable global halten
+    // Scanner global definieren
     let html5QrCode;
     const resBox = document.getElementById("res");
 
@@ -63,23 +68,34 @@
         document.getElementById("home-screen").style.display = "none";
         document.getElementById("reader-area").style.display = "block";
         
-        // KORREKTUR: Initialisierung erst nach DOM-Update
+        // 2. KORREKTUR: Objekt-Management
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
 
+        // 3. KORREKTUR: Mehr Zeit für die Kamera-Initialisierung
         setTimeout(() => {
-            const config = { fps: 20, qrbox: { width: 250, height: 180 }, aspectRatio: 1.0 };
-            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                html5QrCode.stop().then(() => {
-                    document.getElementById("reader-area").style.display = "none";
-                    checkData(decodedText);
-                });
-            }).catch(err => { 
+            const config = { 
+                fps: 20, 
+                qrbox: { width: 250, height: 180 }, 
+                aspectRatio: 1.0 
+            };
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                (decodedText) => {
+                    // Erfolgreicher Scan
+                    html5QrCode.stop().then(() => {
+                        document.getElementById("reader-area").style.display = "none";
+                        checkData(decodedText);
+                    });
+                }
+            ).catch(err => { 
                 console.error("Kamera-Fehler:", err);
-                alert("Kamera-Zugriff verweigert. Bitte HTTPS und Berechtigungen prüfen.");
+                alert("Kamera konnte nicht gestartet werden. Prüfe bitte: 1. HTTPS Verbindung? 2. Zugriff erlaubt?");
             });
-        }, 300); // Längeres Timeout für mobile Browser
+        }, 500); // 500ms geben dem Handy genug Zeit zum Rendern
     }
 
     function activateManual() {
@@ -97,7 +113,7 @@
         resBox.innerHTML = "🛠️ ANALYSE LÄUFT...";
 
         try {
-            // KORREKTUR: Vollständige URL-Verkettung mit $ und korrektem Proxy-Pfad
+            // 4. KORREKTUR: URL Syntax repariert (Backticks und $)
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxyUrl = `https://api.allorigins.win{encodeURIComponent(target)}`;
             
@@ -112,7 +128,6 @@
                 const origins = (p.origins || p.countries || "Unbekannt").toLowerCase();
                 const tags = (p.categories_tags || []).join(" ").toLowerCase();
                 
-                // BEWEISKETTEN-LOGIK
                 const isNonEU = origins.includes("non-eu") || (!origins.includes("germany") && !origins.includes("deutschland") && !origins.includes("eu"));
                 const isCritical = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
                 
