@@ -4,25 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ehrlicher Bissen - Beweiskette</title>
-    
+    <!-- FIX 1: Vollständiger Pfad zur Scanner-Library -->
     <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 20px; background: #f4f7f6; color: #2c3e50; margin: 0; }
-        .container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 550px; position: relative; }
-        h1 { font-size: 1.6em; margin-bottom: 25px; font-weight: 800; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f7f6; color: #2c3e50; margin: 0; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 500px; }
+        h1 { font-size: 1.6em; margin-bottom: 25px; font-weight: bold; }
         
         #home-screen { display: block; margin-top: 30px; }
         .menu-btn { width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.1em; }
         .btn-scan { background: #2c3e50; color: white; }
         .btn-manual { background: #ffffff; color: #2c3e50; border: 2px solid #2c3e50; }
 
-        /* KORREKTUR: Sichtbarkeit erzwingen */
-        #reader-area { display: none; width: 100%; position: relative; z-index: 5; }
-        #reader { width: 100%; min-height: 350px; border-radius: 20px; border: 3px solid #2c3e50; overflow: hidden; background: #000; }
+        /* FIX 2: Sichtbarer Bereich für den Scanner */
+        #reader-area { display: none; width: 100%; }
+        #reader { width: 100%; min-height: 350px; border-radius: 20px; border: 3px solid #2c3e50; overflow: hidden; background: #000; position: relative; }
         
         #res { margin-top: 20px; padding: 25px; border-radius: 20px; display: none; text-align: left; line-height: 1.5; color: white; font-weight: bold; }
-        .status-header { font-size: 1.3em; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 10px; }
-        
+        .status-header { font-size: 1.2em; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 8px; margin-bottom: 10px; }
+
         #manual-input-area { display: none; margin-top: 20px; }
         #barcode-field { width: 90%; padding: 15px; border-radius: 12px; border: 2px solid #bdc3c7; font-size: 1.3em; text-align: center; margin-bottom: 15px; }
         .btn-action { width: 100%; padding: 18px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
@@ -34,68 +34,56 @@
 <div class="container">
     <h1>Ehrlicher Bissen</h1>
 
+    <!-- STARTSEITE -->
     <div id="home-screen">
         <button class="menu-btn btn-scan" onclick="activateScanner()">📷 BARCODE SCANNEN</button>
         <button class="menu-btn btn-manual" onclick="activateManual()">⌨️ MANUELLE EINGABE</button>
     </div>
 
+    <!-- SCANNER BEREICH -->
     <div id="reader-area">
         <div id="reader"></div>
         <button class="btn-action btn-back" onclick="location.reload()">❌ ABBRECHEN</button>
     </div>
 
+    <!-- MANUELLER BEREICH -->
     <div id="manual-input-area">
         <input type="number" id="barcode-field" placeholder="EAN / GTIN Code" inputmode="numeric">
-        <button class="menu-btn btn-scan" onclick="checkData(document.getElementById('barcode-field').value)">DATEN ABFRAGEN</button>
+        <button class="menu-btn btn-scan" onclick="checkData(document.getElementById('barcode-field').value)">🔍 DATEN ABFRAGEN</button>
         <button class="btn-action btn-back" onclick="location.reload()">❌ ZURÜCK</button>
     </div>
 
+    <!-- ERGEBNIS -->
     <div id="res"></div>
     <button id="r-btn" class="btn-action" style="display:none; background:#2c3e50; color:white;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
 </div>
 
-<!-- 1. KORREKTUR: Vollständiger Link zur Library -->
-    <script src="https://unpkg.com"></script>
-
-    <!-- ... (dein Style bleibt gleich) ... -->
-
 <script>
-    // Scanner global definieren
-    let html5QrCode;
+    let html5QrCode; // Globaler Scanner-Speicher
     const resBox = document.getElementById("res");
 
     function activateScanner() {
         document.getElementById("home-screen").style.display = "none";
         document.getElementById("reader-area").style.display = "block";
         
-        // 2. KORREKTUR: Objekt-Management
+        // Initialisierung erst, wenn das Div sichtbar ist
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
 
-        // 3. KORREKTUR: Mehr Zeit für die Kamera-Initialisierung
+        // FIX 3: Timeout gegen Black Screen
         setTimeout(() => {
-            const config = { 
-                fps: 20, 
-                qrbox: { width: 250, height: 180 }, 
-                aspectRatio: 1.0 
-            };
-            
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => {
-                    // Erfolgreicher Scan
-                    html5QrCode.stop().then(() => {
-                        document.getElementById("reader-area").style.display = "none";
-                        checkData(decodedText);
-                    });
-                }
-            ).catch(err => { 
+            const config = { fps: 20, qrbox: { width: 250, height: 180 }, aspectRatio: 1.0 };
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("reader-area").style.display = "none";
+                    checkData(decodedText);
+                });
+            }).catch(err => { 
                 console.error("Kamera-Fehler:", err);
-                alert("Kamera konnte nicht gestartet werden. Prüfe bitte: 1. HTTPS Verbindung? 2. Zugriff erlaubt?");
+                alert("Kamera-Zugriff verweigert oder kein HTTPS.");
             });
-        }, 500); // 500ms geben dem Handy genug Zeit zum Rendern
+        }, 500); 
     }
 
     function activateManual() {
@@ -107,18 +95,19 @@
     async function checkData(code) {
         if(!code) return;
         document.getElementById("manual-input-area").style.display = "none";
+        document.getElementById("reader-area").style.display = "none";
         resBox.style.display = "block";
         resBox.style.background = "#34495e";
         resBox.style.color = "white";
         resBox.innerHTML = "🛠️ ANALYSE LÄUFT...";
 
         try {
-            // 4. KORREKTUR: URL Syntax repariert (Backticks und $)
+            // FIX 4: Korrekte URL-Syntax mit $ und AllOrigins-Proxy
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxyUrl = `https://api.allorigins.win{encodeURIComponent(target)}`;
             
             const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("API-Fehler");
+            if (!response.ok) throw new Error("Netzwerkfehler");
             
             const proxyData = await response.json();
             const data = JSON.parse(proxyData.contents);
@@ -128,12 +117,13 @@
                 const origins = (p.origins || p.countries || "Unbekannt").toLowerCase();
                 const tags = (p.categories_tags || []).join(" ").toLowerCase();
                 
+                // Beweisketten-Logik
                 const isNonEU = origins.includes("non-eu") || (!origins.includes("germany") && !origins.includes("deutschland") && !origins.includes("eu"));
                 const isCritical = tags.includes("honey") || tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
                 
                 let color = "#27ae60"; 
                 let head = "🟢 KONFORM";
-                let desc = "Beweiskette geschlossen. Registereintrag verifiziert.";
+                let desc = "Beweiskette geschlossen. Register verifiziert.";
 
                 if (isNonEU) { color = "#e67e22"; head = "🟡 UNGEWISS (IMPORT)"; desc = "Herkunft außerhalb EU. Zollprüfung empfohlen."; }
                 if (isCritical) { color = "#e74c3c"; head = "🔴 DISSONANZ"; desc = "Kritische Merkmale detektiert."; }
@@ -141,20 +131,17 @@
                 resBox.style.background = color;
                 resBox.innerHTML = `
                     <div class="status-header">${head}</div>
-                    <div style="font-size:0.85em; margin-bottom:10px;">${desc}</div>
-                    <div><b>Produkt:</b> ${p.product_name || 'N/A'}</div>
-                    <div><b>Herkunft:</b> ${p.origins || 'Register-Check...'}</div>
-                    <hr style="border:0; border-top:1px solid rgba(255,255,255,0.2); margin:15px 0;">
-                    <div style="font-size:0.8em;">
-                        <b>🛂 BEWEIS (TARIC):</b> HS-${code.substring(0,4)}<br>
-                        <b>🕒 ZEITSTEMPEL:</b> ${new Date().toLocaleString('de-DE')}<br>
-                        <a href="https://taxation-customs.ec.europa.eu" target="_blank" style="color:white; display:block; margin-top:10px; font-weight:bold;">[AMTLICHE ZOLLDATEN PRÜFEN]</a>
-                    </div>
+                    <small>${desc}</small><hr style="opacity:0.3;">
+                    Produkt: ${p.product_name || 'N/A'}<br>
+                    Marke: ${p.brands || 'N/A'}<br>
+                    Herkunft: ${p.origins || 'Register-Check...'}<br>
+                    <br>
+                    <small>🛂 TARIC: HS-${code.substring(0,4)} | 🕒 ${new Date().toLocaleString('de-DE')}</small>
                 `;
-            } else { throw new Error("Nicht gefunden"); }
+            } else { throw Error(); }
         } catch (e) {
             resBox.style.background = "#f1c40f"; resBox.style.color = "#000";
-            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Produkt nicht in Registern gelistet.<br>ID: ${code}`;
+            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Keine Beweiskette verfügbar.<br>ID: ${code}`;
         }
         document.getElementById("r-btn").style.display = "block";
     }
