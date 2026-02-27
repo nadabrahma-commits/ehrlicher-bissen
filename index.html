@@ -55,12 +55,20 @@
     const resBox = document.getElementById("res");
     const spinner = document.getElementById("loading-spinner");
 
-    async function startSystem() {
-        document.getElementById("landing-page").style.display = "none";
-        document.getElementById("scanner-area").style.display = "block";
-        spinner.style.display = "block";
-
+    async function stopSystem() {
+    if (html5QrCode) {
         try {
+            await html5QrCode.stop();
+            // Explizites Kill-Signal für die Video-Tracks
+            const videoElement = document.querySelector('#reader video');
+            if (videoElement && videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+            }
+            console.log("Hardware freigegeben.");
+        } catch (err) {
+            console.error("Veto bei Terminierung.");
+        }
+      
             // Hardware-Check
             const devices = await Html5Qrcode.getCameras();
             if (!devices || devices.length === 0) throw new Error("Keine Kamera.");
@@ -74,14 +82,17 @@
             // Verzögerung für Layout-Stabilität
             setTimeout(async () => {
                 try {
-                    const config = { fps: 25, qrbox: { width: 280, height: 180 }, aspectRatio: 1.0 };
-                    await html5QrCode.start(cameraId, config, (decodedText) => {
-                        if (navigator.vibrate) navigator.vibrate(100);
-                        html5QrCode.stop().then(() => {
-                            document.getElementById("scanner-area").style.display = "none";
-                            checkData(decodedText);
-                        });
-                    });
+                    const config = { 
+    fps: 25, 
+    qrbox: { width: 280, height: 180 },
+    aspectRatio: 1.0,
+    // Verhindert unnötiges Nachfokussieren bei stabilen Lichtverhältnissen
+    disableFlip: false, 
+    videoConstraints: {
+        focusMode: 'continuous', // Wichtig für mobile Endgeräte
+        advanced: [{focusMode: "continuous"}] 
+    }
+};
                     spinner.style.display = "none";
                 } catch (e) {
                     spinner.style.display = "none";
