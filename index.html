@@ -74,7 +74,7 @@
         document.getElementById("scanner-area").style.display = "block";
         spinner.style.display = "block"; // Spinner anzeigen während Hardware-Wake-up
 
-        if (!html5QrCode) {
+        if html5QrCode) { await html5QrCode.clear(); }
             html5QrCode = new Html5Qrcode("reader");
         }
 
