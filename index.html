@@ -69,55 +69,39 @@
     const resBox = document.getElementById("res");
     const spinner = document.getElementById("loading-spinner");
 
-    async function startSystem() {
-    const spinner = document.getElementById("loading-spinner");
-    const landing = document.getElementById("landing-page");
-    const scannerArea = document.getElementById("scanner-area");
+    function startSystem() {
+        document.getElementById("landing-page").style.display = "none";
+        document.getElementById("scanner-area").style.display = "block";
+        spinner.style.display = "block"; // Spinner anzeigen während Hardware-Wake-up
 
-    // 1. UI-WECHSEL & SPINNER START
-    landing.style.display = "none";
-    scannerArea.style.display = "block";
-    spinner.style.display = "block"; 
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
 
-    try {
-        // 2. HARDWARE-HANDSHAKE
-        const devices = await Html5Qrcode.getCameras();
-        if (!devices || devices.length === 0) throw new Error("Keine Kamera gefunden.");
-        
-        const cameraId = devices[devices.length - 1].id;
-        if (html5QrCode) { await html5QrCode.clear(); }
-        html5QrCode = new Html5Qrcode("reader");
-
-        const config = { 
-            fps: 25, 
-            qrbox: { width: 280, height: 180 }, 
-            aspectRatio: 1.0 
-        };
-
-        // 3. SCANNER STARTEN
-        await html5QrCode.start(cameraId, config, (decodedText) => {
-            // BEI SCAN-ERFOLG: ALLES STOPPEN
-            spinner.style.display = "none"; 
-            if (navigator.vibrate) navigator.vibrate(100);
+        // PRÄZISION: 500ms Gedenksekunde für Layout-Stabilität
+        setTimeout(() => {
+            const config = { 
+                fps: 25, 
+                qrbox: { width: 280, height: 180 }, 
+                aspectRatio: 1.0 
+            };
             
-            html5QrCode.stop().then(() => {
-                scannerArea.style.display = "none";
-                checkData(decodedText); // Übergabe an Datenbank-Logik
-            });
-        });
-
-        // 4. SPINNER AUS, SOBALD DIE KAMERA BILD LIEFERT
-        // (Ein kleiner Delay hilft dem Autofokus beim Einrasten)
-        setTimeout(() => { spinner.style.display = "none"; }, 1200);
-
-    } catch (err) {
-        // VETO-PROTOKOLL BEI FEHLER
-        spinner.style.display = "none";
-        alert("Hardware-Fehler: " + err.message);
-        location.reload();
-    }
-
-    
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                (decodedText) => {
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    html5QrCode.stop().then(() => {
+                        document.getElementById("scanner-area").style.display = "none";
+                        checkData(decodedText);
+                    });
+                }
+            ).then(() => {
+                spinner.style.display = "none"; // Kamera läuft, Spinner weg
+            }).catch(err => {
+                spinner.style.display = "none";
+                alert("Kamera-Fehler: Bitte Berechtigungen prüfen!");
+                location.reload();
             });
         }, 500); 
     }
