@@ -55,20 +55,12 @@
     const resBox = document.getElementById("res");
     const spinner = document.getElementById("loading-spinner");
 
-    async function stopSystem() {
-    if (html5QrCode) {
+    async function startSystem() {
+        document.getElementById("landing-page").style.display = "none";
+        document.getElementById("scanner-area").style.display = "block";
+        spinner.style.display = "block";
+
         try {
-            await html5QrCode.stop();
-            // Explizites Kill-Signal für die Video-Tracks
-            const videoElement = document.querySelector('#reader video');
-            if (videoElement && videoElement.srcObject) {
-                videoElement.srcObject.getTracks().forEach(track => track.stop());
-            }
-            console.log("Hardware freigegeben.");
-        } catch (err) {
-            console.error("Veto bei Terminierung.");
-        }
-      
             // Hardware-Check
             const devices = await Html5Qrcode.getCameras();
             if (!devices || devices.length === 0) throw new Error("Keine Kamera.");
@@ -82,17 +74,14 @@
             // Verzögerung für Layout-Stabilität
             setTimeout(async () => {
                 try {
-                    const config = { 
-    fps: 25, 
-    qrbox: { width: 280, height: 180 },
-    aspectRatio: 1.0,
-    // Verhindert unnötiges Nachfokussieren bei stabilen Lichtverhältnissen
-    disableFlip: false, 
-    videoConstraints: {
-        focusMode: 'continuous', // Wichtig für mobile Endgeräte
-        advanced: [{focusMode: "continuous"}] 
-    }
-};
+                    const config = { fps: 25, qrbox: { width: 280, height: 180 }, aspectRatio: 1.0 };
+                    await html5QrCode.start(cameraId, config, (decodedText) => {
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        html5QrCode.stop().then(() => {
+                            document.getElementById("scanner-area").style.display = "none";
+                            checkData(decodedText);
+                        });
+                    });
                     spinner.style.display = "none";
                 } catch (e) {
                     spinner.style.display = "none";
@@ -122,10 +111,8 @@
         resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
 
         try {
-            // FIX: Template-Literals mit $ korrigiert
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxy = `https://api.allorigins.win{encodeURIComponent(target)}`;
-            
             const response = await fetch(proxy);
             const proxyData = await response.json();
             const data = JSON.parse(proxyData.contents);
@@ -134,30 +121,22 @@
                 const p = data.product;
                 const herkunft = p.origins || p.countries_en || 'Nicht deklariert (Schattenware)';
                 const tags = (p.categories_tags || []).join(" ").toLowerCase();
-                
-                // Erweiterte 5-Säulen-Logik (TARIC-Vorselektion)
-                const isHonig = tags.includes("honey") || code.startsWith("4009");
-                const isOel = tags.includes("oil") || code.startsWith("1507") || code.startsWith("1509");
-                const isKaffee = tags.includes("coffee") || code.startsWith("0901");
-                const isBaby = tags.includes("baby") || tags.includes("infant");
-                const isBrot = tags.includes("bread") || code.startsWith("1905");
-                
-                const isCritical = isHonig || isOel || isKaffee || isBaby || isBrot;
+                const isCritical = tags.includes("honig") || code.startsWith("0409");
                 
                 resBox.style.background = isCritical ? "#e74c3c" : "#27ae60";
+                resBox.style.color = "#fff";
                 resBox.innerHTML = `
-                    <div class="status-header">${isCritical ? '🔴 PRÜFPFLICHTIG' : '🟢 KONFORM'}</div>
+                    <div class="status-header">${isCritical ? '🔴 DISSONANZ' : '🟢 KONFORM'}</div>
                     <strong>PRODUKT:</strong> ${p.product_name || 'N/A'}<br>
                     <strong>HERKUNFT:</strong> ${herkunft}<br>
                     <hr style="opacity:0.3; margin:10px 0;">
-                    <strong>TARIC-SEKTOR:</strong> ${isHonig ? '0409 (Honig)' : isOel ? '1509 (Speiseöl)' : 'Standard'}<br>
-                    <a href="https://ec.europa.eu" target="_blank" style="color:white; font-size:0.85em;">[TRACES VALIDIERUNG]</a>
+                    <strong>ZOLL-ID:</strong> HS-${code.substring(0, 4)}<br>
+                    <a href="https://taxation-customs.ec.europa.eu" target="_blank" style="color:white; font-size:0.85em;">[AMTSTARIFAUSKUNFT]</a>
                 `;
             } else { throw Error(); }
         } catch (e) {
-            resBox.style.background = "#f1c40f"; 
-            resBox.style.color = "#000";
-            resBox.innerHTML = `<div class="status-header">🟡 UNBEKANNT</div>Keine Beweiskette in TRACES/TARIC gefunden.`;
+            resBox.style.background = "#f1c40f"; resBox.style.color = "#000";
+            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Keine Beweiskette verfügbar.`;
         }
         document.getElementById("r-btn").style.display = "block";
     }
