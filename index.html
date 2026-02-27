@@ -43,21 +43,30 @@
         <button class="btn-main btn-scan" onclick="startSystem()">📷 BARCODE SCANNEN</button>
         <button class="btn-main btn-manual" onclick="openManual()">⌨️ MANUELL EINGEBEN</button>
     </div>
-
-    <!-- SCANNER BEREICH -->
-    <div id="scanner-area">
-        <div id="reader">
-            <div id="loading-spinner" class="spinner"></div>
-        </div>
-        <button class="btn-main" style="background:#7f8c8d; color:#fff; margin-top:15px;" onclick="location.reload()">❌ ABBRECHEN</button>
-    </div>
+  
 
     <!-- MANUELLER BEREICH -->
     <div id="manual-area">
         <input type="number" id="barcode-input" placeholder="Barcode-Nummer..." inputmode="numeric">
         <button class="btn-main btn-scan" onclick="checkData(document.getElementById('barcode-input').value)">🔍 DATEN ABFRAGEN</button>
-        <button class="btn-main" style="background:#7f8c8d; color:#fff;" onclick="location.reload()">ZURÜCK</button>
+        <button <!-- SCANNER BEREICH -->
+
+
+    <!-- SCANNER BEREICH: KOMPLETT-MODUL -->
+<div id="scanner-area" style="display:none;">
+    
+    <div id="reader" style="position:relative; background:#000; min-height:350px; border-radius:20px; overflow:hidden;">
+        
+        <!-- DER ANKER (SPINNER) - SITZT DIREKT IM ZENTRUM DES VIDEOS -->
+        <div id="loading-spinner" class="spinner"></div>
+        
     </div>
+    <!-- ABBRUCH-LOGIK -->
+    <button class="btn-main" style="background:#7f8c8d; color:#fff; margin-top:15px;" onclick="location.reload()">  ❌ ABBRECHEN
+    </button>
+    
+</div>
+    
 
     <!-- ERGEBNIS -->
     <div id="res"></div>
