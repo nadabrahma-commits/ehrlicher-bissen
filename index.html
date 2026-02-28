@@ -70,55 +70,48 @@
     const spinner = document.getElementById("loading-spinner");
 
     async function startSystem() {
-    const spinner = document.getElementById("loading-spinner");
-    spinner.style.display = "block"; // 1. Start: "Ich arbeite"
     log("INITIALISIERE...");
+    document.getElementById("landing-page").style.display = "none";
+    document.getElementById("scanner-area").style.display = "block";
 
-    // ... (UI-Wechsel und Timeout)
+    setTimeout(async () => {
+        try {
+            log("PRÜFE ELEMENT...");
+            const reader = document.getElementById("reader");
+            if (!reader) throw new Error("Element #reader fehlt");
+            log(`BREITE: ${reader.clientWidth}px`);
 
-    try {
-        log("KAMERA-ANFRAGE...");
-        await html5QrCode.start(/*...*/);
-        
-        log("KAMERA AKTIV.");
-        spinner.style.display = "none"; // 2. Erfolg: Spinner weg
-    } catch (err) {
-        log(`VETO: ${err.name}`);
-        spinner.style.display = "none"; // 3. Fehler: Spinner auch weg
-    }
-}
+            if (html5QrCode) {
+                log("STOPPE ALTE INSTANZ...");
+                await html5QrCode.stop().catch(() => {});
+                await html5QrCode.clear();
+            }
 
-        if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
-        }
+            log("KAMERA-ANFRAGE...");
 
-        // PRÄZISION: 500ms Gedenksekunde für Layout-Stabilität
-        setTimeout(() => {
-            const config = { 
-                fps: 25, 
-                qrbox: { width: 280, height: 180 }, 
-                aspectRatio: 1.0 
-            };
-            
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => {
-                    if (navigator.vibrate) navigator.vibrate(100);
-                    html5QrCode.stop().then(() => {
-                        document.getElementById("scanner-area").style.display = "none";
-                        checkData(decodedText);
-                    });
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 20, qrbox: { width: 250, height: 150 } },
+                (text) => {
+                    log("SCAN ERFOLGREICH!");
+                    html5QrCode.stop().then(() => checkData(text));
                 }
-            ).then(() => {
-                spinner.style.display = "none"; // Kamera läuft, Spinner weg
-            }).catch(err => {
-                spinner.style.display = "none";
-                alert("Kamera-Fehler: Bitte Berechtigungen prüfen!");
-                location.reload();
-            });
-        }, 500); 
-    }
+            );
+
+            log("KAMERA AKTIV.");
+            document.getElementById("loading-spinner").style.display = "none";
+
+        } catch (err) {
+            log(`VETO: ${err.name} - ${err.message}`);
+            document.getElementById("loading-spinner").style.display = "none";
+            
+            // Wichtigster Check für dich:
+            if (err.name === "NotAllowedError") log("HINWEIS: Berechtigung fehlt (HTTPS?)");
+            if (err.name === "NotFoundError") log("HINWEIS: Keine Rückkamera gefunden.");
+        }
+    }, 400);
+}
 
     function openManual() {
         document.getElementById("landing-page").style.display = "none";
