@@ -3,158 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ehrlicher Bissen - Beweissicherung</title>
+    <title>Ehrlicher Bissen - Ebene 1</title>
+    <!-- FIX: Korrekte Bibliothekseinbindung -->
     <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; background: #f4f4f4; color: #2c3e50; margin: 0; }
-        .app-container { max-width: 450px; margin: auto; background: #fff; padding: 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 550px; position: relative; overflow: hidden; }
-        h1 { font-size: 1.8em; margin-bottom: 25px; font-weight: 900; letter-spacing: -1px; }
-
-        /* NAVIGATION STATES */
-        #landing-page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; display: flex; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box; }
-        #scanner-area, #manual-area, #res { display: none; }
-
-        /* SCANNER-FIX & SPINNER */
-        #reader { width: 100%; min-height: 350px; border-radius: 20px; border: 3px solid #2c3e50; overflow: hidden; background: #000; position: relative; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; background: #f4f4f4; height: 100vh; overflow: hidden; }
+        .app-container { max-width: 450px; margin: auto; background: #fff; height: 100%; position: relative; display: flex; flex-direction: column; }
         
-        /* DER LADE-KRINGEL (SPINNER) */
-        .spinner { border: 4px solid rgba(255, 255, 255, 0.3); border-top: 4px solid #ffffff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; position: absolute; top: 50%; left: 50%; margin: -20px 0 0 -20px; z-index: 10; display: none; }
+        /* LOTTO-STYLE: Landingpage als Overlay */
+        #landing-page { position: absolute; top:0; left:0; width:100%; height:100%; background:#fff; z-index:100; display:flex; flex-direction:column; justify-content:center; padding:20px; box-sizing:border-box; }
+        
+        #scanner-area { flex: 1; display: none; padding: 20px; position: relative; z-index: 10; }
+        #reader { width: 100%; min-height: 350px; border-radius: 20px; border: 3px solid #2c3e50; overflow: hidden; background: #000; }
+        #reader video { object-fit: cover !important; }
+
+        .btn-main { width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.1em; background: #2c3e50; color: #fff; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #2c3e50; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* BUTTONS & INPUTS */
-        .btn-main { width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.2s; }
-        .btn-scan { background: #2c3e50; color: #fff; }
-        .btn-manual { background: #fff; color: #2c3e50; border: 2px solid #2c3e50; }
-        #barcode-input { width: 85%; padding: 18px; border-radius: 12px; border: 2px solid #bdc3c7; font-size: 1.3em; text-align: center; margin-bottom: 15px; }
         
-        /* RESULTATE */
-        #res { padding: 25px; border-radius: 20px; text-align: left; color: #fff; line-height: 1.6; }
-        .status-header { font-size: 1.4em; font-weight: 900; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 10px; padding-bottom: 5px; text-transform: uppercase; }
+        #res { display: none; padding: 25px; border-radius: 20px; text-align: left; color: #fff; margin: 20px; font-weight: bold; }
+        .status-header { font-size: 1.4em; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <h1>Ehrlicher Bissen</h1>
-
-    <!-- LANDINGPAGE -->
     <div id="landing-page">
-        <h2 style="margin-bottom:40px;">Beweissicherung <br><small style="font-weight:400; opacity:0.7;">Ebene 1: Registerabfrage</small></h2>
-        <button class="btn-main btn-scan" onclick="startSystem()">📷 BARCODE SCANNEN</button>
-        <button class="btn-main btn-manual" onclick="openManual()">⌨️ MANUELL EINGEBEN</button>
+        <h1>Ehrlicher Bissen</h1>
+        <h2 style="opacity:0.7;">Beweissicherung <br><small>Ebene 1: Registerabfrage</small></h2>
+        <button class="btn-main" onclick="startSystem()">📷 BARCODE SCANNEN</button>
+        <div id="loading-spinner" class="spinner"></div>
     </div>
 
-    <!-- SCANNER BEREICH -->
     <div id="scanner-area">
-        <div id="reader">
-            <div id="loading-spinner" class="spinner"></div>
-        </div>
-        <button class="btn-main" style="background:#7f8c8d; color:#fff; margin-top:15px;" onclick="location.reload()">❌ ABBRECHEN</button>
+        <div id="reader"></div>
+        <button class="btn-main" style="background:#7f8c8d; margin-top:20px;" onclick="location.reload()">❌ ABBRECHEN</button>
     </div>
 
-    <!-- MANUELLER BEREICH -->
-    <div id="manual-area">
-        <input type="number" id="barcode-input" placeholder="Barcode-Nummer..." inputmode="numeric">
-        <button class="btn-main btn-scan" onclick="checkData(document.getElementById('barcode-input').value)">🔍 DATEN ABFRAGEN</button>
-        <button class="btn-main" style="background:#7f8c8d; color:#fff;" onclick="location.reload()">ZURÜCK</button>
-    </div>
-
-    <!-- ERGEBNIS -->
     <div id="res"></div>
-    <button id="r-btn" class="btn-main" style="display:none; background:#2c3e50; color:#fff; margin-top:15px;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
+    <button id="r-btn" class="btn-main" style="display:none; margin: 20px;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
 </div>
 
 <script>
     let html5QrCode;
-    const resBox = document.getElementById("res");
-    const spinner = document.getElementById("loading-spinner");
 
-    function startSystem() {
-        document.getElementById("landing-page").style.display = "none";
-        document.getElementById("scanner-area").style.display = "block";
-        spinner.style.display = "block"; // Spinner anzeigen während Hardware-Wake-up
+    async function startSystem() {
+        const landing = document.getElementById("landing-page");
+        const spinner = document.getElementById("loading-spinner");
+        spinner.style.display = "block";
 
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("reader");
-        }
-
-        // PRÄZISION: 500ms Gedenksekunde für Layout-Stabilität
-        setTimeout(() => {
-            const config = { 
-                fps: 25, 
-                qrbox: { width: 280, height: 180 }, 
-                aspectRatio: 1.0 
-            };
-            
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => {
-                    if (navigator.vibrate) navigator.vibrate(100);
-                    html5QrCode.stop().then(() => {
-                        document.getElementById("scanner-area").style.display = "none";
-                        checkData(decodedText);
-                    });
-                }
-            ).then(() => {
-                spinner.style.display = "none"; // Kamera läuft, Spinner weg
-            }).catch(err => {
+        // Kurze Verzögerung für UI-Stabilität
+        setTimeout(async () => {
+            try {
+                document.getElementById("scanner-area").style.display = "block";
+                html5QrCode = new Html5Qrcode("reader");
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 20, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
+                    (decodedText) => {
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        html5QrCode.stop().then(() => {
+                            document.getElementById("scanner-area").style.display = "none";
+                            checkData(decodedText);
+                        });
+                    }
+                );
+                // Erst wenn Bild da, Landingpage weg
+                landing.style.display = "none";
                 spinner.style.display = "none";
-                alert("Kamera-Fehler: Bitte Berechtigungen prüfen!");
+            } catch (err) {
+                spinner.style.display = "none";
+                alert("VETO: Kamera-Zugriff fehlgeschlagen (HTTPS?).");
                 location.reload();
-            });
-        }, 500); 
-    }
-
-    function openManual() {
-        document.getElementById("landing-page").style.display = "none";
-        document.getElementById("manual-area").style.display = "block";
-        document.getElementById("barcode-input").focus();
+            }
+        }, 300);
     }
 
     async function checkData(code) {
-        if(!code) return;
-        document.getElementById("manual-area").style.display = "none";
+        const resBox = document.getElementById("res");
         resBox.style.display = "block";
         resBox.style.background = "#34495e";
         resBox.innerHTML = `ANALYSE LÄUFT: ${code}...`;
 
         try {
-            // BEWEISKETTE: OpenFoodFacts API v2
+            // TARIC/TRACES Identifikation (Säulen-Logik)
+            const c = code.toString();
+            let saeule = "Standard / Unbekannt";
+            let isCritical = false;
+
+            if (c.startsWith("0409")) { saeule = "Säule 1: Honig"; isCritical = true; }
+            else if (c.startsWith("1509") || c.startsWith("1510")) { saeule = "Säule 2: Speiseöl"; isCritical = true; }
+            else if (c.startsWith("1901")) { saeule = "Säule 3: Babybrei"; isCritical = true; }
+            else if (c.startsWith("0901")) { saeule = "Säule 4: Kaffee"; isCritical = true; }
+            else if (c.startsWith("1905")) { saeule = "Säule 5: Brot"; isCritical = true; }
+
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxy = `https://api.allorigins.win{encodeURIComponent(target)}`;
+            
             const response = await fetch(proxy);
             const proxyData = await response.json();
             const data = JSON.parse(proxyData.contents);
 
             if (data.product) {
                 const p = data.product;
-                const origins = (p.origins || p.countries || "Unbekannt").toLowerCase();
-                const tags = (p.categories_tags || []).join(" ").toLowerCase();
-                
-                // ZOLL-IDENTIFIKATION (HS-CODE)
-                const hsGroup = code.substring(0, 4);
-                const isCritical = tags.includes("honig") || code.startsWith("0409") || code.startsWith("1509");
-                
-                let color = "#27ae60"; let head = "🟢 KONFORM";
-                if (isCritical) { color = "#e74c3c"; head = "🔴 DISSONANZ"; }
-
-                resBox.style.background = color;
+                resBox.style.background = isCritical ? "#e74c3c" : "#27ae60";
                 resBox.innerHTML = `
-                    <div class="status-header">${head}</div>
-                    <strong>Produkt:</strong> ${p.product_name || 'N/A'}<br>
-                    <strong>Herkunft:</strong> ${p.origins || 'Register-Check...'}<br>
+                    <div class="status-header">${isCritical ? '🔴 PRÜFPFLICHTIG' : '🟢 KONFORM'}</div>
+                    <strong>PRODUKT:</strong> ${p.product_name || 'N/A'}<br>
+                    <strong>KATEGORIE:</strong> ${saeule}<br>
+                    <strong>HERKUNFT:</strong> ${p.origins || p.countries_en || 'Nicht deklariert'}<br>
                     <hr style="opacity:0.3; margin:10px 0;">
-                    <strong>Zoll-Beweis:</strong> HS-Gruppe ${hsGroup}<br>
-                    <a href="https://taxation-customs.ec.europa.eu" target="_blank" style="color:white; font-size:0.85em;">Amtliche TARIC-Historie prüfen</a>
+                    <a href="https://taxation-customs.ec.europa.eu" target="_blank" style="color:white; font-size:0.85em;">[AMTSTARIFAUSKUNFT ÖFFNEN]</a>
                 `;
             } else { throw Error(); }
         } catch (e) {
             resBox.style.background = "#f1c40f"; resBox.style.color = "#000";
-            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Keine Beweiskette verfügbar.`;
+            resBox.innerHTML = `<div class="status-header">🟡 SCHATTENWARE</div>Keine Beweiskette im Register gefunden.`;
         }
         document.getElementById("r-btn").style.display = "block";
     }
 </script>
 </body>
 </html>
+
