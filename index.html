@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ehrlicher Bissen - Ebene 1</title>
-    <!-- Bibliothek mit sicherem Pfad -->
-    <script src="https://unpkg.com"></script>
+    <!-- Sicherer CDN Link -->
+    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { font-family: sans-serif; margin: 0; background: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .app-container { width: 90%; max-width: 400px; background: #fff; border-radius: 30px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; }
         #reader-wrapper { width: 100%; height: 250px; background: #000; border-radius: 20px; overflow: hidden; border: 3px solid #2c3e50; }
         #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; }
         .btn-main { width: 100%; padding: 18px; border-radius: 15px; border: none; font-weight: bold; background: #2c3e50; color: #fff; margin-top: 15px; cursor: pointer; }
         input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ccc; margin-top: 10px; text-align: center; box-sizing: border-box; }
         #res { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:#fff; z-index:100; padding:20px; box-sizing:border-box; border-radius: 30px; }
@@ -19,14 +20,14 @@
 <body>
 
 <div class="app-container">
-    <h1 style="text-align:center; font-size:1.4em;">Ehrlicher Bissen</h1>
+    <h1 style="text-align:center; font-size:1.4em; margin-top:0;">Ehrlicher Bissen</h1>
     
     <div id="reader-wrapper">
         <div id="reader"></div>
     </div>
 
     <div id="ui-main">
-        <p id="status-msg" style="text-align:center; opacity:0.6; font-size:0.8em;">Warte auf Kamera...</p>
+        <p id="status-msg" style="text-align:center; font-weight:bold; font-size:0.9em; margin:10px 0;">INITIALISIERE...</p>
         <input type="number" id="manual-code" placeholder="Barcode manuell tippen..." inputmode="numeric">
         <button class="btn-main" style="background:#7f8c8d;" onclick="runCheck(document.getElementById('manual-code').value)">🔍 MANUELL PRÜFEN</button>
     </div>
@@ -35,28 +36,41 @@
 </div>
 
 <script>
-    // DIREKT-START BEIM LADEN
+    // Globale Instanz für Android
+    let scanner = null;
+
     window.onload = function() {
         const status = document.getElementById("status-msg");
         
-        // 1. Instanz direkt erstellen
-        const scanner = new Html5Qrcode("reader");
-        
-        // 2. Sofortiger Kamera-Befehl
-        scanner.start(
-            { facingMode: "environment" }, 
-            { fps: 15, qrbox: { width: 250, height: 150 } },
-            (text) => {
-                if (navigator.vibrate) navigator.vibrate(100);
-                scanner.stop().then(() => runCheck(text));
+        // Android-Safe-Start
+        setTimeout(async () => {
+            try {
+                if (typeof Html5Qrcode === 'undefined') {
+                    status.innerText = "❌ FEHLER: BIBLIOTHEK FEHLT";
+                    return;
+                }
+
+                scanner = new Html5Qrcode("reader");
+                status.innerText = "⌛ FORDERE KAMERA AN...";
+
+                await scanner.start(
+                    { facingMode: "environment" }, 
+                    { fps: 15, qrbox: { width: 250, height: 180 } },
+                    (text) => {
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        scanner.stop().then(() => runCheck(text));
+                    }
+                );
+                
+                status.innerText = "🟢 SCANNER BEREIT";
+                status.style.color = "green";
+
+            } catch (err) {
+                status.innerText = "🔴 VETO: " + err;
+                status.style.color = "red";
+                console.error(err);
             }
-        ).then(() => {
-            status.innerText = "🟢 SCANNER AKTIV";
-            status.style.color = "green";
-        }).catch(err => {
-            status.innerText = "🔴 KAMERA-VETO: " + err;
-            status.style.color = "red";
-        });
+        }, 500); // 500ms Puffer für Android-Layout
     };
 
     async function runCheck(code) {
@@ -65,11 +79,16 @@
         resBox.style.display = "block";
         resBox.style.background = "#34495e";
         resBox.style.color = "#fff";
-        resBox.innerHTML = "ANALYSE: " + code;
+        resBox.innerHTML = "PRÜFUNG LÄUFT: " + code;
 
         try {
+            // Abstraktes Säulen-Mapping (Axiom 3)
             const isCritical = (code.startsWith("0409") || code.startsWith("1509") || code.startsWith("1901") || code.startsWith("0901") || code.startsWith("1905"));
-            const response = await fetch(`https://api.allorigins.win{encodeURIComponent('https://world.openfoodfacts.org')}`);
+            
+            const target = `https://world.openfoodfacts.org{code}.json`;
+            const proxy = `https://api.allorigins.win{encodeURIComponent(target)}`;
+            
+            const response = await fetch(proxy);
             const json = await response.json();
             const data = JSON.parse(json.contents);
 
@@ -80,7 +99,8 @@
                     <h2 style="margin-top:0;">${isCritical ? '🔴 PRÜFPFLICHTIG' : '🟢 KONFORM'}</h2>
                     <strong>PRODUKT:</strong> ${p.product_name || 'N/A'}<br>
                     <strong>HERKUNFT:</strong> ${p.origins || 'Unbekannt'}<br>
-                    <button class="btn-main" style="background:#fff; color:#000;" onclick="location.reload()">🏠 NEUER SCAN</button>
+                    <hr style="opacity:0.3; margin:15px 0;">
+                    <button class="btn-main" style="background:#fff; color:#000;" onclick="location.reload()">🏠 NEUE PRÜFUNG</button>
                 `;
             } else { throw "404"; }
         } catch (e) {
@@ -91,4 +111,3 @@
 </script>
 </body>
 </html>
-
