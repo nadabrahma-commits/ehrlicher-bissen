@@ -36,24 +36,49 @@
     let scanner = null;
 
     async function startScan() {
-        document.getElementById('ui-main').style.display = 'none';
-        document.getElementById('reader').style.display = 'block';
-        
-        scanner = new Html5Qrcode("reader");
-        try {
+    const readerElem = document.getElementById('reader');
+    const uiMain = document.getElementById('ui-main');
+    
+    uiMain.style.display = 'none';
+    readerElem.style.display = 'block';
+    
+    // 1. Instanz-Reset
+    if (scanner) { await scanner.clear(); }
+    scanner = new Html5Qrcode("reader");
+
+    try {
+        // 2. Android-Hardware wecken
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+            // Wir nehmen gezielt die LETZTE Kamera (meist die Hauptkamera hinten)
+            const cameraId = devices[devices.length - 1].id;
+            
             await scanner.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: 250 },
+                cameraId, 
+                { 
+                    fps: 15, 
+                    qrbox: { width: 250, height: 180 },
+                    aspectRatio: 1.0
+                },
                 (text) => { 
-                    scanner.stop();
-                    runCheck(text); 
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    scanner.stop().then(() => {
+                        readerElem.style.display = 'none';
+                        runCheck(text); 
+                    });
                 }
             );
-        } catch (err) {
-            alert("Kamera-Veto: " + err);
-            location.reload();
+            console.log("Kamera aktiv auf Android.");
+        } else {
+            throw new Error("Keine Kamera gefunden.");
         }
+    } catch (err) {
+        // 3. Fallback: Wenn schwarz bleibt, sofort Manuell-Modus erzwingen
+        console.error("VETO:", err);
+        alert("HARDWARE-BLOCK: Bitte Berechtigung in Chrome prüfen.");
+        location.reload();
     }
+}
 
     async function runCheck(code) {
         if(!code) return;
