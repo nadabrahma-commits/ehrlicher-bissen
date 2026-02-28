@@ -7,33 +7,22 @@
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; margin: 0; background: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .app-container { width: 90%; max-width: 400px; background: #fff; border-radius: 30px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
-        
-        h1 { font-size: 1.5em; margin-bottom: 5px; color: #2c3e50; }
-        p { opacity: 0.6; margin-bottom: 20px; font-size: 0.9em; }
+        .app-container { width: 90%; max-width: 400px; background: #fff; border-radius: 30px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; }
+        h1 { font-size: 1.5em; margin: 0; color: #2c3e50; text-align: center; }
+        p { opacity: 0.6; margin-bottom: 20px; font-size: 0.9em; text-align: center; }
 
-        /* DAS GUCKLOCH (Kamera-Fenster) */
-        #reader-wrapper { 
-            width: 100%; 
-            height: 250px; 
-            background: #000; 
-            border-radius: 20px; 
-            overflow: hidden; 
-            border: 3px solid #2c3e50;
-            position: relative;
-        }
+        /* GUCKLOCH */
+        #reader-wrapper { width: 100%; height: 250px; background: #000; border-radius: 20px; overflow: hidden; border: 3px solid #2c3e50; position: relative; }
         #reader { width: 100% !important; height: 100% !important; }
-        #reader video { object-fit: cover !important; }
+        #reader video { object-fit: cover !important; width:100%; height:100%; }
 
-        /* UI ELEMENTE UNTER DEM FENSTER */
+        /* CONTROLS */
         .controls { margin-top: 20px; }
-        .btn-main { width: 100%; padding: 18px; border-radius: 15px; border: none; font-weight: bold; font-size: 1em; cursor: pointer; background: #2c3e50; color: #fff; margin-bottom: 15px; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); }
-        
+        .btn-main { width: 100%; padding: 18px; border-radius: 15px; border: none; font-weight: bold; font-size: 1em; cursor: pointer; background: #2c3e50; color: #fff; margin-bottom: 10px; }
         input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ccc; font-size: 1.1em; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
 
-        /* ERGEBNIS-OVERLAY */
-        #res { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:#fff; z-index:100; padding:20px; box-sizing:border-box; }
+        /* ERGEBNIS */
+        #res { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:#fff; z-index:100; padding:20px; box-sizing:border-box; border-radius: 30px; }
     </style>
 </head>
 <body>
@@ -42,61 +31,60 @@
     <h1>Ehrlicher Bissen</h1>
     <p>Ebene 1: Beweissicherung</p>
 
-    <!-- Das Fenster in der Landingpage -->
     <div id="reader-wrapper">
         <div id="reader"></div>
     </div>
 
     <div class="controls" id="ui-main">
-        <button class="btn-main" id="scan-btn" onclick="activateScan()">📷 JETZT SCANNEN</button>
+        <!-- BESTÜCKTER BUTTON 1 -->
+        <button class="btn-main" id="scan-btn" onclick="activateScan()">📷 SCAN STARTEN</button>
         
         <div style="border-top: 1px solid #eee; padding-top: 15px;">
             <input type="number" id="manual-code" placeholder="Code manuell..." inputmode="numeric">
-            <button class="btn-main" style="background:#7f8c8d;" onclick="runCheck(document.getElementById('manual-code').value)">🔍 PRÜFEN</button>
+            <!-- BESTÜCKTER BUTTON 2 -->
+            <button class="btn-main" style="background:#7f8c8d;" onclick="runCheck(document.getElementById('manual-code').value)">🔍 MANUELL PRÜFEN</button>
         </div>
     </div>
 
-    <!-- Ergebnis-Ebene -->
     <div id="res"></div>
 </div>
 
 <script>
     let html5QrCode = null;
-    let isScanning = false;
 
-    // 1. KAMERA STARTET SOFORT IM GUCKLOCH (aber ohne Scan-Logik)
+    // AUTOMATISCHER HARDWARE-CHECK (Weckt die Kamera)
     window.addEventListener('load', async () => {
         html5QrCode = new Html5Qrcode("reader");
-        try {
-            await html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 200, height: 150 } },
-                () => {} // Leerer Callback: Kamera läuft nur als Vorschaubild
-            );
-            console.log("Guckloch aktiv.");
-        } catch (err) {
-            console.error("Kamera-Veto:", err);
-        }
+        // Android-Trick: Kurzer Ping an die Kamera-Liste
+        Html5Qrcode.getCameras().then(devices => {
+            console.log("Hardware bereit.");
+        }).catch(err => console.log("Warte auf Interaktion."));
     });
 
-    // 2. AUSLÖSER: Scan-Funktion "scharf" schalten
     async function activateScan() {
-        if(!html5QrCode) return;
         const btn = document.getElementById("scan-btn");
-        btn.innerText = "⌛ SUCHE BARCODE...";
+        btn.innerText = "⌛ KAMERA AKTIV...";
         btn.style.background = "#e67e22";
 
-        // Wir "re-starten" nicht, sondern nutzen die laufende Instanz
-        // Da die Library das direkte Umschalten oft nicht mag, stoppen/starten wir kurz intern
-        await html5QrCode.stop();
-        await html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 20, qrbox: { width: 220, height: 150 } },
-            (text) => {
-                if (navigator.vibrate) navigator.vibrate(100);
-                runCheck(text);
-            }
-        );
+        try {
+            // Falls schon was läuft: Reset
+            await html5QrCode.clear().catch(() => {});
+            
+            // STARTET DIE KAMERA IM GUCKLOCH
+            await html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 220, height: 150 } },
+                (text) => { 
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    runCheck(text); 
+                }
+            );
+            btn.innerText = "🔍 SUCHE BARCODE...";
+        } catch (err) {
+            alert("Kamera-Veto: " + err);
+            btn.innerText = "📷 SCAN STARTEN";
+            btn.style.background = "#2c3e50";
+        }
     }
 
     async function runCheck(code) {
@@ -105,6 +93,7 @@
         resBox.style.display = "block";
         resBox.innerHTML = `<div style="padding:20px; background:#34495e; color:#fff; border-radius:20px;">ANALYSE: ${code}...</div>`;
 
+        // Hier folgt die 5-Säulen-Abfrage (Honig, Öl, etc.)
         try {
             const target = `https://world.openfoodfacts.org{code}.json`;
             const proxy = `https://api.allorigins.win{encodeURIComponent(target)}`;
@@ -120,7 +109,7 @@
                     <div style="padding:25px; border-radius:20px; background:${isSaeule ? '#e74c3c' : '#27ae60'}; color:#fff; height:100%;">
                         <h2 style="margin-top:0;">${isSaeule ? '🔴 PRÜFPFLICHTIG' : '🟢 KONFORM'}</h2>
                         <p style="color:#fff; opacity:1;"><strong>PRODUKT:</strong> ${p.product_name || 'N/A'}</p>
-                        <p style="color:#fff; opacity:1;"><strong>HERKUNFT:</strong> ${p.origins || 'Nicht im Register'}</p>
+                        <p style="color:#fff; opacity:1;"><strong>SÄULE:</strong> ${isSaeule ? 'Beweissicherung' : 'Standard'}</p>
                         <button class="btn-main" style="background:#fff; color:#2c3e50; margin-top:20px;" onclick="location.reload()">🏠 NEU STARTEN</button>
                     </div>`;
             } else { throw "404"; }
@@ -131,3 +120,4 @@
 </script>
 </body>
 </html>
+
