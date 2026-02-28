@@ -62,30 +62,50 @@
     });
 
     async function activateScan() {
-        const btn = document.getElementById("scan-btn");
-        btn.innerText = "⌛ KAMERA AKTIV...";
-        btn.style.background = "#e67e22";
+    const btn = document.getElementById("scan-btn");
+    const readerDiv = document.getElementById("reader");
+    
+    btn.innerText = "⌛ HARDWARE-CHECK...";
+    btn.style.background = "#e67e22";
 
-        try {
-            // Falls schon was läuft: Reset
-            await html5QrCode.clear().catch(() => {});
-            
-            // STARTET DIE KAMERA IM GUCKLOCH
-            await html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 15, qrbox: { width: 220, height: 150 } },
-                (text) => { 
-                    if (navigator.vibrate) navigator.vibrate(100);
-                    runCheck(text); 
-                }
-            );
-            btn.innerText = "🔍 SUCHE BARCODE...";
-        } catch (err) {
-            alert("Kamera-Veto: " + err);
-            btn.innerText = "📷 SCAN STARTEN";
-            btn.style.background = "#2c3e50";
+    try {
+        // Falls eine alte Instanz existiert: Versuchen zu löschen
+        if (window.html5QrCode) {
+            await window.html5QrCode.stop().catch(() => {});
+            await window.html5QrCode.clear().catch(() => {});
         }
+
+        // NEU INITIALISIEREN direkt beim Klick
+        window.html5QrCode = new Html5Qrcode("reader");
+        
+        const config = { 
+            fps: 15, 
+            qrbox: { width: 220, height: 150 },
+            aspectRatio: 1.0 
+        };
+
+        await window.html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (text) => { 
+                if (navigator.vibrate) navigator.vibrate(100);
+                // Stoppen und Ergebnis zeigen
+                window.html5QrCode.stop().then(() => {
+                    runCheck(text); 
+                });
+            }
+        );
+        
+        btn.innerText = "🔍 SCAN LÄUFT...";
+        btn.style.background = "#27ae60";
+
+    } catch (err) {
+        console.error("VETO:", err);
+        alert("KAMERA-FEHLER: " + err);
+        btn.innerText = "📷 SCAN NEU STARTEN";
+        btn.style.background = "#c0392b";
     }
+}
 
     async function runCheck(code) {
         if(!code) return;
