@@ -31,13 +31,23 @@
     <div id="landing-page">
         <h1>Ehrlicher Bissen</h1>
         <h2 style="opacity:0.7;">Beweissicherung <br><small>Ebene 1: Registerabfrage</small></h2>
+        
         <button class="btn-main" onclick="startSystem()">📷 BARCODE SCANNEN</button>
+        
+        <!-- MANUELLE EBENE WIEDER DA -->
+        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+            <input type="number" id="manual-code" placeholder="Barcode manuell..." 
+                   style="width: 80%; padding: 15px; border-radius: 10px; border: 2px solid #ccc; font-size: 1.1em; text-align: center;">
+            <button class="btn-main" style="margin-top: 10px; background: #7f8c8d;" 
+                    onclick="checkData(document.getElementById('manual-code').value)">🔍 MANUELL PRÜFEN</button>
+        </div>
+
         <div id="loading-spinner" class="spinner"></div>
     </div>
 
-    <div id="scanner-area">
+    <div id="scanner-area" style="display:none;">
         <div id="reader"></div>
-        <button class="btn-main" style="background:#7f8c8d; margin-top:20px;" onclick="location.reload()">❌ ABBRECHEN</button>
+        <button class="btn-main" style="background:#7f8c8d; margin-top:20px;" onclick="location.reload()">❌ ZURÜCK</button>
     </div>
 
     <div id="res"></div>
@@ -45,6 +55,40 @@
 </div>
 
 <script>
+    // FIX: Die Start-Logik mit Fallback
+    async function startSystem() {
+        const spinner = document.getElementById("loading-spinner");
+        spinner.style.display = "block";
+
+        try {
+            const html5QrCode = new Html5Qrcode("reader");
+            
+            // Erst umschalten, dann Hardware anfragen
+            document.getElementById("landing-page").style.display = "none";
+            document.getElementById("scanner-area").style.display = "block";
+
+            await html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: { width: 250, height: 150 } },
+                (text) => {
+                    html5QrCode.stop().then(() => {
+                        document.getElementById("scanner-area").style.display = "none";
+                        checkData(text);
+                    });
+                }
+            );
+            spinner.style.display = "none";
+        } catch (err) {
+            spinner.style.display = "none";
+            console.error(err);
+            // VETO-HANDLING: Wenn Kamera scheitert, zurück zur manuellen Eingabe
+            alert("KAMERA-VETO: Hardware blockiert oder kein HTTPS. Nutze die manuelle Eingabe.");
+            location.reload(); 
+        }
+    }
+
+    // checkData bleibt wie im Master-Code...
+
     let html5QrCode;
 
     async function startSystem() {
